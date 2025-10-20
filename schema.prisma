@@ -1,0 +1,829 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// MODÈLES UTILISATEURS ET AUTHENTIFICATION
+// ============================================================================
+
+model User {
+  id                String    @id @default(cuid())
+  clerkId           String    @unique // ID unique de Clerk
+  email             String    @unique
+  emailVerified     DateTime?
+  name              String?
+  avatar            String?
+  locale            String    @default("fr")
+  timezone          String    @default("Europe/Paris")
+  
+  // Informations de profil
+  firstName         String?
+  lastName          String?
+  company           String?
+  jobTitle          String?
+  bio               String?   @db.Text
+  website           String?
+  
+  // Statut et permissions
+  status            UserStatus @default(ACTIVE)
+  role              UserRole   @default(USER)
+  isEmailVerified   Boolean    @default(false)
+  
+  // Métadonnées
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  lastLoginAt       DateTime?
+  
+  // Relations (suppression des modèles NextAuth)
+  organizationMemberships OrganizationMember[]
+  books             Book[]
+  jobs              BookJob[]
+  subscriptions     Subscription[]
+  invoices          Invoice[]
+  usageMetrics      UsageMetric[]
+  activityLogs      ActivityLog[]
+  apiKeys           ApiKey[]
+  
+  @@map("users")
+}
+
+// ============================================================================
+// MODÈLES ORGANISATIONS ET MULTI-TENANT
+// ============================================================================
+
+model Organization {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  description     String?   @db.Text
+  website         String?
+  logo            String?
+  
+  // Configuration
+  settings        Json      @default("{}")
+  branding        Json      @default("{}")
+  
+  // Limites et quotas
+  plan            PlanType  @default(FREE)
+  maxUsers        Int       @default(1)
+  maxBooks        Int       @default(10)
+  maxBooksPerMonth Int      @default(5)
+  maxStorageGB    Int       @default(1)
+  
+  // Statut
+  status          OrganizationStatus @default(ACTIVE)
+  trialEndsAt     DateTime?
+  
+  // Métadonnées
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  members         OrganizationMember[]
+  books           Book[]
+  jobs            BookJob[]
+  subscriptions   Subscription[]
+  invoices        Invoice[]
+  usageMetrics    UsageMetric[]
+  apiKeys         ApiKey[]
+  
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String              @id @default(cuid())
+  userId         String
+  organizationId String
+  role           OrganizationRole    @default(MEMBER)
+  status         MembershipStatus    @default(ACTIVE)
+  
+  // Permissions spécifiques
+  permissions    Json                @default("[]")
+  
+  // Métadonnées
+  joinedAt       DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  
+  // Relations
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+// ============================================================================
+// MODÈLES LIVRES ET CONTENU
+// ============================================================================
+
+model Book {
+  id              String      @id @default(cuid())
+  
+  // Informations de base
+  title           String
+  subtitle        String?
+  description     String?     @db.Text
+  topic           String
+  goal            String      @db.Text
+  
+  // Contenu
+  content         String?     @db.Text
+  outline         Json?       // Structure du plan du livre
+  totalPages      Int?
+  wordCount       Int?
+  
+  // Métadonnées de création
+  language        String      @default("fr")
+  genre           String?
+  targetAudience  String?
+  difficulty      BookDifficulty @default(INTERMEDIATE)
+  
+  // Statut et workflow
+  status          BookStatus  @default(DRAFT)
+  visibility      BookVisibility @default(PRIVATE)
+  publishedAt     DateTime?
+  
+  // Relations utilisateur/organisation
+  authorId        String
+  organizationId  String?
+  
+  // Stockage et fichiers
+  storageProvider StorageProvider @default(LOCAL)
+  s3Bucket        String?
+  s3Key           String?
+  markdownPath    String?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  author          User        @relation(fields: [authorId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  chapters        Chapter[]
+  formats         BookFormat[]
+  jobs            BookJob[]
+  corrections     BookCorrection[]
+  revisions       BookRevision[]
+  collaborators   BookCollaborator[]
+  downloads       BookDownload[]
+  
+  @@map("books")
+}
+
+model Chapter {
+  id              String      @id @default(cuid())
+  bookId          String
+  
+  // Contenu
+  title           String
+  content         String      @db.Text
+  description     String?     @db.Text
+  
+  // Structure
+  order           Int
+  wordCount       Int?
+  estimatedReadTime Int?      // en minutes
+  
+  // Statut
+  status          ChapterStatus @default(DRAFT)
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  book            Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  corrections     ChapterCorrection[]
+  
+  @@unique([bookId, order])
+  @@map("chapters")
+}
+
+model BookFormat {
+  id              String      @id @default(cuid())
+  bookId          String
+  
+  // Format et fichier
+  format          FormatType
+  fileName        String
+  fileSize        Int         // en bytes
+  mimeType        String
+  
+  // Stockage
+  storageProvider StorageProvider @default(LOCAL)
+  filePath        String?     // chemin local
+  s3Bucket        String?
+  s3Key           String?
+  cdnUrl          String?     // URL CDN pour accès rapide
+  
+  // Métadonnées de génération
+  generatedWith   String?     // outil utilisé (pandoc, etc.)
+  quality         String?     // HIGH, MEDIUM, LOW
+  
+  // Statut
+  status          FormatStatus @default(GENERATING)
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  book            Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  downloads       BookDownload[]
+  
+  @@unique([bookId, format])
+  @@map("book_formats")
+}
+
+// ============================================================================
+// MODÈLES JOBS ET WORKFLOW
+// ============================================================================
+
+model BookJob {
+  id              String      @id @default(cuid())
+  
+  // Identification
+  externalJobId   String?     @unique // ID du job externe (CrewAI)
+  
+  // Configuration du job
+  jobType         JobType     @default(BOOK_GENERATION)
+  priority        JobPriority @default(NORMAL)
+  
+  // Paramètres d'entrée
+  inputData       Json        // { title, topic, goal, etc. }
+  
+  // État et progression
+  status          JobStatus   @default(PENDING)
+  progress        Json?       // { step, percentage, details }
+  currentStep     String?
+  totalSteps      Int?
+  completedSteps  Int?
+  
+  // Résultats
+  result          Json?       // résultats du job
+  error           String?     @db.Text
+  logs            String?     @db.Text
+  
+  // Timing
+  startedAt       DateTime?
+  completedAt     DateTime?
+  estimatedDuration Int?      // en secondes
+  
+  // Relations
+  userId          String
+  organizationId  String?
+  bookId          String?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  user            User        @relation(fields: [userId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  book            Book?       @relation(fields: [bookId], references: [id])
+  
+  @@map("book_jobs")
+}
+
+// ============================================================================
+// MODÈLES CORRECTION ET RÉVISION
+// ============================================================================
+
+model BookCorrection {
+  id              String      @id @default(cuid())
+  bookId          String
+  
+  // Type de correction
+  type            CorrectionType
+  severity        CorrectionSeverity @default(INFO)
+  
+  // Détails de la correction
+  title           String
+  description     String      @db.Text
+  suggestion      String?     @db.Text
+  
+  // Position dans le texte
+  startPosition   Int?
+  endPosition     Int?
+  lineNumber      Int?
+  
+  // Statut
+  status          CorrectionStatus @default(PENDING)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  book            Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  
+  @@map("book_corrections")
+}
+
+model ChapterCorrection {
+  id              String      @id @default(cuid())
+  chapterId       String
+  
+  // Type de correction
+  type            CorrectionType
+  severity        CorrectionSeverity @default(INFO)
+  
+  // Détails de la correction
+  title           String
+  description     String      @db.Text
+  suggestion      String?     @db.Text
+  
+  // Position dans le texte
+  startPosition   Int?
+  endPosition     Int?
+  lineNumber      Int?
+  
+  // Statut
+  status          CorrectionStatus @default(PENDING)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  chapter         Chapter     @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  
+  @@map("chapter_corrections")
+}
+
+model BookRevision {
+  id              String      @id @default(cuid())
+  bookId          String
+  
+  // Version
+  version         String      // v1.0, v1.1, etc.
+  title           String
+  description     String?     @db.Text
+  
+  // Contenu de la révision
+  changes         Json        // détails des changements
+  content         String?     @db.Text // contenu complet à cette révision
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  createdBy       String
+  
+  // Relations
+  book            Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  
+  @@unique([bookId, version])
+  @@map("book_revisions")
+}
+
+// ============================================================================
+// MODÈLES COLLABORATION
+// ============================================================================
+
+model BookCollaborator {
+  id              String      @id @default(cuid())
+  bookId          String
+  userId          String
+  
+  // Permissions
+  role            CollaboratorRole @default(VIEWER)
+  permissions     Json        @default("[]")
+  
+  // Statut
+  status          CollaboratorStatus @default(PENDING)
+  
+  // Métadonnées
+  invitedAt       DateTime    @default(now())
+  acceptedAt      DateTime?
+  
+  // Relations
+  book            Book        @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  
+  @@unique([bookId, userId])
+  @@map("book_collaborators")
+}
+
+// ============================================================================
+// MODÈLES ABONNEMENTS ET FACTURATION
+// ============================================================================
+
+model Subscription {
+  id              String      @id @default(cuid())
+  
+  // Identification
+  userId          String?
+  organizationId  String?
+  
+  // Plan et tarification
+  plan            PlanType
+  status          SubscriptionStatus @default(ACTIVE)
+  billingCycle    BillingCycle @default(MONTHLY)
+  
+  // Période de facturation
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialStart      DateTime?
+  trialEnd        DateTime?
+  
+  // Tarification
+  amount          Decimal     @db.Decimal(10,2)
+  currency        String      @default("NGN")
+  
+  // Intégration Paystack
+  paystackCustomerId      String?
+  paystackSubscriptionId  String? @unique
+  paystackPlanId          String?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  canceledAt      DateTime?
+  cancelAtPeriodEnd Boolean   @default(false)
+  
+  // Relations
+  user            User?       @relation(fields: [userId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  invoices        Invoice[]
+  
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id              String      @id @default(cuid())
+  
+  // Identification
+  number          String      @unique // INV-2024-001
+  userId          String?
+  organizationId  String?
+  subscriptionId  String?
+  
+  // Montants
+  subtotal        Decimal     @db.Decimal(10,2)
+  taxAmount       Decimal     @db.Decimal(10,2) @default(0)
+  total           Decimal     @db.Decimal(10,2)
+  currency        String      @default("EUR")
+  
+  // Statut et dates
+  status          InvoiceStatus @default(DRAFT)
+  dueDate         DateTime
+  paidAt          DateTime?
+  
+  // Intégration Paystack
+  paystackInvoiceId String?     @unique
+  paystackTransactionId String?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  user            User?       @relation(fields: [userId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  subscription    Subscription? @relation(fields: [subscriptionId], references: [id])
+  items           InvoiceItem[]
+  
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String      @id @default(cuid())
+  invoiceId       String
+  
+  // Détails de l'article
+  description     String
+  quantity        Int         @default(1)
+  unitPrice       Decimal     @db.Decimal(10,2)
+  amount          Decimal     @db.Decimal(10,2)
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  invoice         Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  @@map("invoice_items")
+}
+
+// ============================================================================
+// MODÈLES MÉTRIQUES ET MONITORING
+// ============================================================================
+
+model UsageMetric {
+  id              String      @id @default(cuid())
+  
+  // Identification
+  userId          String?
+  organizationId  String?
+  
+  // Métrique
+  metric          MetricType
+  value           Decimal     @db.Decimal(15,2)
+  unit            String      // books, tokens, MB, etc.
+  
+  // Période
+  periodStart     DateTime
+  periodEnd       DateTime
+  
+  // Métadonnées
+  metadata        Json?
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  user            User?       @relation(fields: [userId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  
+  @@unique([userId, organizationId, metric, periodStart])
+  @@map("usage_metrics")
+}
+
+model ActivityLog {
+  id              String      @id @default(cuid())
+  
+  // Acteur
+  userId          String?
+  organizationId  String?
+  
+  // Action
+  action          String      // book.created, user.login, etc.
+  resource        String?     // book, user, organization
+  resourceId      String?
+  
+  // Détails
+  description     String?
+  metadata        Json?
+  
+  // Métadonnées
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime    @default(now())
+  
+  // Relations
+  user            User?       @relation(fields: [userId], references: [id])
+  
+  @@map("activity_logs")
+}
+
+model BookDownload {
+  id              String      @id @default(cuid())
+  
+  // Identification
+  userId          String?
+  bookId          String
+  formatId        String
+  
+  // Détails du téléchargement
+  downloadedAt    DateTime    @default(now())
+  ipAddress       String?
+  userAgent       String?
+  fileSize        Int?
+  
+  // Relations
+  book            Book        @relation(fields: [bookId], references: [id])
+  format          BookFormat  @relation(fields: [formatId], references: [id])
+  
+  @@map("book_downloads")
+}
+
+// ============================================================================
+// MODÈLES API ET INTÉGRATIONS
+// ============================================================================
+
+model ApiKey {
+  id              String      @id @default(cuid())
+  
+  // Identification
+  name            String
+  key             String      @unique
+  hashedKey       String      // version hashée pour comparaison sécurisée
+  
+  // Propriétaire
+  userId          String?
+  organizationId  String?
+  
+  // Permissions et limites
+  scopes          Json        @default("[]") // ["books:read", "books:write"]
+  rateLimit       Int?        @default(1000) // requêtes par heure
+  
+  // Statut
+  status          ApiKeyStatus @default(ACTIVE)
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  
+  // Métadonnées
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  user            User?       @relation(fields: [userId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  
+  @@map("api_keys")
+}
+
+// ============================================================================
+// ÉNUMÉRATIONS
+// ============================================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TRIAL
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+  CUSTOM
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum BookStatus {
+  DRAFT
+  GENERATING
+  REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BookVisibility {
+  PRIVATE
+  INTERNAL
+  PUBLIC
+}
+
+enum BookDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum ChapterStatus {
+  DRAFT
+  GENERATING
+  REVIEW
+  PUBLISHED
+}
+
+enum FormatType {
+  MARKDOWN
+  PDF
+  EPUB
+  DOCX
+  HTML
+  TXT
+}
+
+enum FormatStatus {
+  GENERATING
+  READY
+  ERROR
+}
+
+enum StorageProvider {
+  LOCAL
+  AWS_S3
+  GOOGLE_CLOUD
+  AZURE_BLOB
+}
+
+enum JobType {
+  BOOK_GENERATION
+  FORMAT_CONVERSION
+  CONTENT_CORRECTION
+  TRANSLATION
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  GENERATING_OUTLINE
+  WRITING_CHAPTERS
+  FINALIZING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum CorrectionType {
+  SPELLING
+  GRAMMAR
+  STYLE
+  COHERENCE
+  STRUCTURE
+  FACT_CHECK
+}
+
+enum CorrectionSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPLIED
+  REJECTED
+  IGNORED
+}
+
+enum CollaboratorRole {
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
+}
+
+enum CollaboratorStatus {
+  PENDING
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  TRIALING
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+  UNCOLLECTIBLE
+}
+
+enum MetricType {
+  BOOKS_CREATED
+  BOOKS_DOWNLOADED
+  STORAGE_USED
+  API_CALLS
+  TOKENS_USED
+  PROCESSING_TIME
+}
+
+enum ApiKeyStatus {
+  ACTIVE
+  INACTIVE
+  REVOKED
+  EXPIRED
+}
