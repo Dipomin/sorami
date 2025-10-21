@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 const isProtectedRoute = createRouteMatcher([
   '/create(.*)',
   '/books(.*)',
+  '/blog(.*)',
   '/jobs(.*)',
   '/dashboard(.*)',
 ]);
@@ -14,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks/clerk',
   '/api/webhooks/book-completion', // Webhook pour la complétion des livres
+  '/api/webhooks/blog-completion', // Webhook pour la complétion des articles de blog
   '/api/books', // API publique pour la liste des livres
 ]);
 
