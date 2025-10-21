@@ -84,6 +84,40 @@ export default async function DashboardPage() {
           <span className="text-green-600 font-medium">Voir mes livres →</span>
         </Link>
 
+        {/* Génération d'images */}
+        <Link
+          href="/generate-images"
+          className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-md border border-purple-200 p-6 hover:shadow-lg transition-shadow"
+        >
+          <div className="flex items-center mb-4">
+            <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-3 rounded-lg">
+              <svg
+                className="w-6 h-6 text-purple-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 ml-3">
+              Générer des images
+            </h3>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Créez des images uniques avec l'IA Gemini 2.0 à partir de texte ou
+            d'images
+          </p>
+          <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+            Créer des images →
+          </span>
+        </Link>
+
         {/* Statistiques */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
           <div className="flex items-center mb-4">

@@ -391,3 +391,114 @@ export async function pollBookJobStatus(jobId: string) {
     throw new Error('Impossible de récupérer le statut du job')
   }
 }
+
+// ============================================================================
+// API IMAGE GENERATION côté client
+// ============================================================================
+
+import type { 
+  ImageGenerationRequest, 
+  ImageGenerationJobResponse,
+  ImageStatusResponse,
+  ImageResultResponse 
+} from '../types/image-api';
+
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9006';
+
+/**
+ * Créer une tâche de génération d'images
+ */
+export async function createImageGeneration(data: ImageGenerationRequest): Promise<ImageGenerationJobResponse> {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/images/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Erreur inconnue' }));
+      throw new Error(error.message || 'Erreur lors de la création de la génération d\'images');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la création de la génération d\'images:', error);
+    throw error instanceof Error ? error : new Error('Impossible de créer la génération d\'images');
+  }
+}
+
+/**
+ * Vérifier le statut d'une génération d'images
+ */
+export async function fetchImageStatus(jobId: string): Promise<ImageStatusResponse> {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/images/status/${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération du statut');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du statut:', error);
+    throw new Error('Impossible de récupérer le statut de la génération');
+  }
+}
+
+/**
+ * Récupérer les résultats d'une génération d'images
+ */
+export async function fetchImageResult(jobId: string): Promise<ImageResultResponse> {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/images/result/${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des résultats');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des résultats:', error);
+    throw new Error('Impossible de récupérer les résultats de la génération');
+  }
+}
+
+/**
+ * Polling du statut jusqu'à complétion
+ * @param jobId ID du job
+ * @param onProgress Callback appelé à chaque mise à jour du statut
+ * @param maxAttempts Nombre maximum de tentatives (défaut: 30)
+ * @param intervalMs Intervalle entre les vérifications en ms (défaut: 2000)
+ */
+export async function pollImageGenerationStatus(
+  jobId: string,
+  onProgress?: (status: ImageStatusResponse) => void,
+  maxAttempts: number = 30,
+  intervalMs: number = 2000
+): Promise<ImageResultResponse> {
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    const statusData = await fetchImageStatus(jobId);
+    
+    if (onProgress) {
+      onProgress(statusData);
+    }
+    
+    if (statusData.status === 'COMPLETED') {
+      return await fetchImageResult(jobId);
+    }
+    
+    if (statusData.status === 'FAILED') {
+      throw new Error(statusData.message || 'La génération a échoué');
+    }
+    
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
+  
+  throw new Error('Timeout: La génération prend trop de temps');
+}
