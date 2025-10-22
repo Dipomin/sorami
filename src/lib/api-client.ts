@@ -1,6 +1,31 @@
 // API client-side pour l'application sorami
 // Toutes les fonctions ici font des appels HTTP aux routes API
 
+/**
+ * Helper pour obtenir le token d'authentification côté client
+ * Note: Pour les appels backend, utilisez useSecureAPI hook ou passez le token manuellement
+ */
+async function getAuthToken(): Promise<string | null> {
+  // Côté client, le token sera géré par le navigateur via cookies
+  // Pour les appels backend depuis le client, on doit utiliser un hook
+  return null;
+}
+
+/**
+ * Helper pour créer les headers avec authentification
+ */
+function createAuthHeaders(token?: string): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return headers;
+}
+
 // ============================================================================
 // API BOOKS côté client
 // ============================================================================
@@ -407,14 +432,21 @@ const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:900
 
 /**
  * Créer une tâche de génération d'images
+ * @param data Données de la requête
+ * @param token Token d'authentification Clerk (obligatoire)
  */
-export async function createImageGeneration(data: ImageGenerationRequest): Promise<ImageGenerationJobResponse> {
+export async function createImageGeneration(
+  data: ImageGenerationRequest, 
+  token: string
+): Promise<ImageGenerationJobResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   try {
     const response = await fetch(`${BACKEND_API_URL}/api/images/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(token),
       body: JSON.stringify(data),
     });
     
@@ -432,10 +464,18 @@ export async function createImageGeneration(data: ImageGenerationRequest): Promi
 
 /**
  * Vérifier le statut d'une génération d'images
+ * @param jobId ID du job
+ * @param token Token d'authentification Clerk (obligatoire)
  */
-export async function fetchImageStatus(jobId: string): Promise<ImageStatusResponse> {
+export async function fetchImageStatus(jobId: string, token: string): Promise<ImageStatusResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/images/status/${jobId}`);
+    const response = await fetch(`${BACKEND_API_URL}/api/images/status/${jobId}`, {
+      headers: createAuthHeaders(token),
+    });
     
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération du statut');
@@ -450,10 +490,18 @@ export async function fetchImageStatus(jobId: string): Promise<ImageStatusRespon
 
 /**
  * Récupérer les résultats d'une génération d'images
+ * @param jobId ID du job
+ * @param token Token d'authentification Clerk (obligatoire)
  */
-export async function fetchImageResult(jobId: string): Promise<ImageResultResponse> {
+export async function fetchImageResult(jobId: string, token: string): Promise<ImageResultResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/images/result/${jobId}`);
+    const response = await fetch(`${BACKEND_API_URL}/api/images/result/${jobId}`, {
+      headers: createAuthHeaders(token),
+    });
     
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des résultats');
@@ -469,27 +517,33 @@ export async function fetchImageResult(jobId: string): Promise<ImageResultRespon
 /**
  * Polling du statut jusqu'à complétion
  * @param jobId ID du job
+ * @param token Token d'authentification Clerk (obligatoire)
  * @param onProgress Callback appelé à chaque mise à jour du statut
  * @param maxAttempts Nombre maximum de tentatives (défaut: 30)
  * @param intervalMs Intervalle entre les vérifications en ms (défaut: 2000)
  */
 export async function pollImageGenerationStatus(
   jobId: string,
+  token: string,
   onProgress?: (status: ImageStatusResponse) => void,
   maxAttempts: number = 30,
   intervalMs: number = 2000
 ): Promise<ImageResultResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   let attempts = 0;
   
   while (attempts < maxAttempts) {
-    const statusData = await fetchImageStatus(jobId);
+    const statusData = await fetchImageStatus(jobId, token);
     
     if (onProgress) {
       onProgress(statusData);
     }
     
     if (statusData.status === 'COMPLETED') {
-      return await fetchImageResult(jobId);
+      return await fetchImageResult(jobId, token);
     }
     
     if (statusData.status === 'FAILED') {
@@ -516,14 +570,21 @@ import type {
 
 /**
  * Créer une génération de vidéo
+ * @param request Données de la requête
+ * @param token Token d'authentification Clerk (obligatoire)
  */
-export async function createVideoGeneration(request: VideoGenerationRequest): Promise<VideoJobResponse> {
+export async function createVideoGeneration(
+  request: VideoGenerationRequest,
+  token: string
+): Promise<VideoJobResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   try {
     const response = await fetch(`${BACKEND_API_URL}/api/videos/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: createAuthHeaders(token),
       body: JSON.stringify(request),
     });
 
@@ -541,10 +602,18 @@ export async function createVideoGeneration(request: VideoGenerationRequest): Pr
 
 /**
  * Récupérer le statut d'une génération de vidéo
+ * @param jobId ID du job
+ * @param token Token d'authentification Clerk (obligatoire)
  */
-export async function fetchVideoStatus(jobId: string): Promise<VideoStatusResponse> {
+export async function fetchVideoStatus(jobId: string, token: string): Promise<VideoStatusResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/videos/status/${jobId}`);
+    const response = await fetch(`${BACKEND_API_URL}/api/videos/status/${jobId}`, {
+      headers: createAuthHeaders(token),
+    });
     
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération du statut');
@@ -559,10 +628,18 @@ export async function fetchVideoStatus(jobId: string): Promise<VideoStatusRespon
 
 /**
  * Récupérer les résultats d'une génération de vidéo
+ * @param jobId ID du job
+ * @param token Token d'authentification Clerk (obligatoire)
  */
-export async function fetchVideoResult(jobId: string): Promise<VideoResultResponse> {
+export async function fetchVideoResult(jobId: string, token: string): Promise<VideoResultResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/videos/result/${jobId}`);
+    const response = await fetch(`${BACKEND_API_URL}/api/videos/result/${jobId}`, {
+      headers: createAuthHeaders(token),
+    });
     
     if (!response.ok) {
       throw new Error('Erreur lors de la récupération des résultats');
@@ -578,27 +655,33 @@ export async function fetchVideoResult(jobId: string): Promise<VideoResultRespon
 /**
  * Polling du statut jusqu'à complétion
  * @param jobId ID du job
+ * @param token Token d'authentification Clerk (obligatoire)
  * @param onProgress Callback appelé à chaque mise à jour du statut
  * @param maxAttempts Nombre maximum de tentatives (défaut: 40 pour vidéos plus longues)
  * @param intervalMs Intervalle entre les vérifications en ms (défaut: 5000)
  */
 export async function pollVideoGenerationStatus(
   jobId: string,
+  token: string,
   onProgress?: (status: VideoStatusResponse) => void,
   maxAttempts: number = 40,
   intervalMs: number = 5000
 ): Promise<VideoResultResponse> {
+  if (!token) {
+    throw new Error('Token d\'authentification manquant');
+  }
+
   let attempts = 0;
   
   while (attempts < maxAttempts) {
-    const statusData = await fetchVideoStatus(jobId);
+    const statusData = await fetchVideoStatus(jobId, token);
     
     if (onProgress) {
       onProgress(statusData);
     }
     
     if (statusData.status === 'completed') {
-      return await fetchVideoResult(jobId);
+      return await fetchVideoResult(jobId, token);
     }
     
     if (statusData.status === 'failed') {

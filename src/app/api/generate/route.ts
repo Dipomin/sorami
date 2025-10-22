@@ -1,12 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 
 const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+    
+    // Obtenir le token JWT Clerk
+    const { getToken } = await auth();
+    const token = await getToken();
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Token d\'authentification manquant' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { title, topic, goal, chapters = [], bookId } = body;
     
@@ -53,7 +66,7 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    // Appeler l'API CrewAI
+    // Appeler l'API CrewAI avec token
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9006';
     
     try {
@@ -63,6 +76,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // ✅ Token Clerk inclus
         },
         body: JSON.stringify({
           title,

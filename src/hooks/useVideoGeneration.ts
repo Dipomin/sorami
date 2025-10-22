@@ -1,10 +1,11 @@
 /**
- * Hook personnalisé pour la génération de vidéos
+ * Hook personnalisé pour la génération de vidéos avec authentification Clerk
  */
 
 'use client';
 
 import { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import {
   createVideoGeneration,
   pollVideoGenerationStatus,
@@ -16,6 +17,7 @@ import type {
 } from '@/types/video-api';
 
 export function useVideoGeneration() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<VideoStatusResponse | null>(null);
   const [result, setResult] = useState<VideoResultResponse | null>(null);
@@ -24,19 +26,36 @@ export function useVideoGeneration() {
 
   const generateVideo = async (request: VideoGenerationRequest) => {
     try {
+      // Vérifications d'authentification
+      if (!isLoaded) {
+        throw new Error('Authentification non chargée');
+      }
+      
+      if (!isSignedIn) {
+        throw new Error('Vous devez être connecté pour générer des vidéos');
+      }
+
       setIsGenerating(true);
       setError(null);
       setProgress(0);
       setResult(null);
       setCurrentStatus(null);
 
-      // Créer le job de génération
-      const jobResponse = await createVideoGeneration(request);
+      // Obtenir le token d'authentification
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      // Créer le job de génération avec le token
+      const jobResponse = await createVideoGeneration(request, token);
       console.log('🎬 Job de génération créé:', jobResponse.job_id);
 
       // Polling avec callback de progression
       const finalResult = await pollVideoGenerationStatus(
         jobResponse.job_id,
+        token, // Passer le token au polling
         (status) => {
           setCurrentStatus(status);
           setProgress(status.progress);

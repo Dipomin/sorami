@@ -124,3 +124,91 @@ export async function getUserDefaultOrganization() {
   
   return null;
 }
+
+/**
+ * Vérifie si l'utilisateur a un abonnement suffisant
+ * @param requiredTier - Niveau d'abonnement requis ('free', 'pro', 'premium', 'enterprise')
+ */
+export async function hasSubscription(requiredTier: string): Promise<boolean> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return false;
+  }
+
+  const subscriptionTiers = {
+    free: 0,
+    pro: 1,
+    premium: 2,
+    enterprise: 3,
+  };
+
+  // Récupérer le tier depuis les métadonnées Clerk ou la base de données
+  const clerkUser = await currentUser();
+  const userSubscription = (clerkUser?.publicMetadata?.subscription as string) || 'free';
+  
+  const userTier = subscriptionTiers[userSubscription as keyof typeof subscriptionTiers] || 0;
+  const required = subscriptionTiers[requiredTier as keyof typeof subscriptionTiers] || 0;
+
+  return userTier >= required;
+}
+
+/**
+ * Vérifie si l'utilisateur a accès à une fonctionnalité
+ * @param feature - Nom de la fonctionnalité
+ */
+export async function hasFeatureAccess(feature: string): Promise<boolean> {
+  const user = await getCurrentUser();
+  
+  if (!user) {
+    return false;
+  }
+
+  // Vérifier les limites d'utilisation depuis la base de données
+  // Cette logique peut être étendue selon vos besoins
+  
+  return true; // Par défaut, autoriser l'accès
+}
+
+/**
+ * Interface pour les informations utilisateur formatées
+ */
+export interface AuthenticatedUser {
+  userId: string;
+  clerkId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  name: string | null;
+  imageUrl: string | null;
+  role: string;
+  subscription?: string;
+  organizationId?: string;
+}
+
+/**
+ * Récupère les informations utilisateur formatées
+ */
+export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
+  const user = await getCurrentUser();
+  const clerkUser = await currentUser();
+  
+  if (!user || !clerkUser) {
+    return null;
+  }
+
+  const defaultOrg = await getUserDefaultOrganization();
+
+  return {
+    userId: user.id,
+    clerkId: user.clerkId,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    name: user.name,
+    imageUrl: user.avatar,
+    role: user.role,
+    subscription: (clerkUser.publicMetadata?.subscription as string) || 'free',
+    organizationId: defaultOrg?.id,
+  };
+}

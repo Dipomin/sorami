@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 const CREWAI_API_URL = process.env.CREWAI_API_URL || 'http://localhost:9006';
 
@@ -10,6 +11,10 @@ export async function GET(
 ) {
   try {
     await requireAuth();
+
+    // Obtenir le token JWT Clerk
+    const { getToken } = await auth();
+    const token = await getToken();
 
     const { jobId } = await params;
 
@@ -48,9 +53,18 @@ export async function GET(
       });
     }
 
-    // Essayer de récupérer le résultat depuis l'API CrewAI
+    // Essayer de récupérer le résultat depuis l'API CrewAI avec token
     try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${CREWAI_API_URL}/api/blog/result/${jobId}`, {
+        headers,
         signal: AbortSignal.timeout(5000), // Timeout de 5 secondes
       });
 

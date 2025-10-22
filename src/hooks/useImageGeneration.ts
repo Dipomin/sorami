@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   createImageGeneration, 
   pollImageGenerationStatus 
@@ -21,23 +22,40 @@ interface UseImageGenerationReturn {
 }
 
 /**
- * Hook pour gérer la génération d'images
+ * Hook pour gérer la génération d'images avec authentification Clerk
  */
 export function useImageGeneration(): UseImageGenerationReturn {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<ImageStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
   const generateImage = useCallback(async (request: ImageGenerationRequest): Promise<ImageResultResponse> => {
+    // Vérifications d'authentification
+    if (!isLoaded) {
+      throw new Error('Authentification non chargée');
+    }
+    
+    if (!isSignedIn) {
+      throw new Error('Vous devez être connecté pour générer des images');
+    }
+
     setIsGenerating(true);
     setError(null);
     setProgress(0);
     setCurrentStatus(null);
 
     try {
-      // Créer la tâche de génération
-      const jobResponse = await createImageGeneration(request);
+      // Obtenir le token d'authentification
+      const token = await getToken();
+      
+      if (!token) {
+        throw new Error('Token d\'authentification manquant');
+      }
+
+      // Créer la tâche de génération avec le token
+      const jobResponse = await createImageGeneration(request, token);
       
       setCurrentStatus({
         job_id: jobResponse.job_id,
@@ -48,6 +66,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
       // Polling du statut avec callback de progression
       const result = await pollImageGenerationStatus(
         jobResponse.job_id,
+        token, // Passer le token au polling
         (status) => {
           setCurrentStatus(status);
           setProgress(status.progress || 0);
@@ -63,7 +82,7 @@ export function useImageGeneration(): UseImageGenerationReturn {
     } finally {
       setIsGenerating(false);
     }
-  }, []);
+  }, [getToken, isLoaded, isSignedIn]);
 
   const reset = useCallback(() => {
     setIsGenerating(false);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 
 const CREWAI_API_URL = process.env.CREWAI_API_URL || 'http://localhost:9006';
 
@@ -8,6 +9,17 @@ export async function POST(request: Request) {
   try {
     // Authentification requise
     const user = await requireAuth();
+
+    // Obtenir le token JWT Clerk pour l'envoyer au backend
+    const { getToken } = await auth();
+    const token = await getToken();
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Token d\'authentification manquant' },
+        { status: 401 }
+      );
+    }
 
     const body = await request.json();
     const { topic, goal, target_word_count = 2000 } = body;
@@ -43,12 +55,13 @@ export async function POST(request: Request) {
       },
     });
 
-    // Essayer d'appeler l'API CrewAI backend
+    // Essayer d'appeler l'API CrewAI backend avec le token
     try {
       const response = await fetch(`${CREWAI_API_URL}/api/blog/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // ✅ Token Clerk inclus
         },
         body: JSON.stringify({
           topic,
