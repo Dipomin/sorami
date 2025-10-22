@@ -502,3 +502,112 @@ export async function pollImageGenerationStatus(
   
   throw new Error('Timeout: La génération prend trop de temps');
 }
+
+// ============================================================================
+// API VIDEOS côté client
+// ============================================================================
+
+import type {
+  VideoGenerationRequest,
+  VideoJobResponse,
+  VideoStatusResponse,
+  VideoResultResponse
+} from '@/types/video-api';
+
+/**
+ * Créer une génération de vidéo
+ */
+export async function createVideoGeneration(request: VideoGenerationRequest): Promise<VideoJobResponse> {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/videos/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Erreur lors de la création de la génération de vidéo');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la création de la génération de vidéo:', error);
+    throw error instanceof Error ? error : new Error('Impossible de créer la génération de vidéo');
+  }
+}
+
+/**
+ * Récupérer le statut d'une génération de vidéo
+ */
+export async function fetchVideoStatus(jobId: string): Promise<VideoStatusResponse> {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/videos/status/${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération du statut');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération du statut:', error);
+    throw new Error('Impossible de récupérer le statut de la génération');
+  }
+}
+
+/**
+ * Récupérer les résultats d'une génération de vidéo
+ */
+export async function fetchVideoResult(jobId: string): Promise<VideoResultResponse> {
+  try {
+    const response = await fetch(`${BACKEND_API_URL}/api/videos/result/${jobId}`);
+    
+    if (!response.ok) {
+      throw new Error('Erreur lors de la récupération des résultats');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la récupération des résultats:', error);
+    throw new Error('Impossible de récupérer les résultats de la génération');
+  }
+}
+
+/**
+ * Polling du statut jusqu'à complétion
+ * @param jobId ID du job
+ * @param onProgress Callback appelé à chaque mise à jour du statut
+ * @param maxAttempts Nombre maximum de tentatives (défaut: 40 pour vidéos plus longues)
+ * @param intervalMs Intervalle entre les vérifications en ms (défaut: 5000)
+ */
+export async function pollVideoGenerationStatus(
+  jobId: string,
+  onProgress?: (status: VideoStatusResponse) => void,
+  maxAttempts: number = 40,
+  intervalMs: number = 5000
+): Promise<VideoResultResponse> {
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    const statusData = await fetchVideoStatus(jobId);
+    
+    if (onProgress) {
+      onProgress(statusData);
+    }
+    
+    if (statusData.status === 'completed') {
+      return await fetchVideoResult(jobId);
+    }
+    
+    if (statusData.status === 'failed') {
+      throw new Error(statusData.error || 'La génération a échoué');
+    }
+    
+    attempts++;
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
+  
+  throw new Error('Timeout: La génération prend trop de temps (>3 minutes)');
+}

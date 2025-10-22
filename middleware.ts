@@ -8,6 +8,7 @@ const isProtectedRoute = createRouteMatcher([
   '/jobs(.*)',
   '/dashboard(.*)',
   '/generate-images(.*)',
+  '/generate-videos(.*)',
 ]);
 
 const isPublicRoute = createRouteMatcher([
@@ -18,6 +19,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/book-completion', // Webhook pour la complétion des livres
   '/api/webhooks/blog-completion', // Webhook pour la complétion des articles de blog
   '/api/webhooks/image-completion', // Webhook pour la complétion des images
+  '/api/webhooks/video-completion', // Webhook pour la complétion des vidéos
   '/api/books', // API publique pour la liste des livres
 ]);
 

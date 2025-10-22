@@ -118,6 +118,40 @@ export default async function DashboardPage() {
           </span>
         </Link>
 
+        {/* Génération de vidéos */}
+        <Link
+          href="/generate-videos"
+          className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg shadow-md border border-blue-200 p-6 hover:shadow-lg transition-shadow"
+        >
+          <div className="flex items-center mb-4">
+            <div className="bg-gradient-to-br from-blue-100 to-cyan-100 p-3 rounded-lg">
+              <svg
+                className="w-6 h-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 ml-3">
+              Générer des vidéos
+            </h3>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Créez des vidéos cinématographiques avec Gemini Veo 2.0 à partir de
+            descriptions
+          </p>
+          <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent font-medium">
+            Créer des vidéos →
+          </span>
+        </Link>
+
         {/* Statistiques */}
         <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
           <div className="flex items-center mb-4">
