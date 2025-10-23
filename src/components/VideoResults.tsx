@@ -27,13 +27,25 @@ export default function VideoResults({ result }: VideoResultsProps) {
 
   const handleDownload = async (video: (typeof result.videos)[0]) => {
     try {
-      // Si l'API fournit une URL, on l'utilise directement
+      // Utiliser directement le lien S3 fourni par le backend
       if (video.file_url) {
-        window.open(video.file_url, "_blank");
+        console.log("📥 Téléchargement depuis S3:", video.file_url);
+
+        // Créer un élément <a> invisible pour forcer le téléchargement
+        const a = document.createElement("a");
+        a.href = video.file_url;
+        a.download = video.filename;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
         return;
       }
 
-      // Sinon, on télécharge via le chemin local (nécessite un endpoint proxy)
+      // Fallback si pas d'URL S3 (cas rare)
+      console.warn("⚠️ Pas d'URL S3, utilisation du chemin local");
       const response = await fetch(
         `/api/videos/download?path=${encodeURIComponent(video.file_path)}`
       );
@@ -49,7 +61,7 @@ export default function VideoResults({ result }: VideoResultsProps) {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      console.error("Erreur lors du téléchargement:", error);
+      console.error("❌ Erreur lors du téléchargement:", error);
       alert("Impossible de télécharger la vidéo. Veuillez réessayer.");
     }
   };
@@ -109,21 +121,34 @@ export default function VideoResults({ result }: VideoResultsProps) {
             key={index}
             className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
           >
-            {/* Aperçu vidéo */}
-            <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative">
+            {/* Lecteur vidéo */}
+            <div className="aspect-video bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative group">
               {video.file_url ? (
-                <video
-                  src={video.file_url}
-                  controls
-                  className="w-full h-full object-cover"
-                  preload="metadata"
-                >
-                  Votre navigateur ne supporte pas la lecture de vidéos.
-                </video>
+                <>
+                  {/* Lecteur vidéo HTML5 avec contrôles complets */}
+                  <video
+                    src={video.file_url}
+                    controls
+                    controlsList="nodownload"
+                    className="w-full h-full object-contain bg-black"
+                    preload="metadata"
+                    playsInline
+                    poster=""
+                  >
+                    Votre navigateur ne supporte pas la lecture de vidéos.
+                  </video>
+
+                  
+                </>
               ) : (
-                <div className="text-center text-white">
+                <div className="text-center text-white p-8">
                   <Film className="w-16 h-16 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Vidéo disponible en téléchargement</p>
+                  <p className="text-sm mb-2">
+                    Vidéo disponible en téléchargement
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Le lien de lecture n'est pas disponible
+                  </p>
                 </div>
               )}
             </div>
@@ -168,6 +193,20 @@ export default function VideoResults({ result }: VideoResultsProps) {
                 </div>
               </div>
 
+              {/* Indicateur de stockage S3 */}
+              {video.file_url && (
+                <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm0 2v12h16V6H4zm2 2h12v2H6V8zm0 4h8v2H6v-2z" />
+                  </svg>
+                  <span className="font-medium">Hébergé sur AWS S3</span>
+                </div>
+              )}
+
               {/* Date de création */}
               <div className="flex items-center text-xs text-gray-500 pt-2 border-t border-gray-100">
                 <Calendar className="w-3 h-3 mr-1" />
@@ -181,14 +220,52 @@ export default function VideoResults({ result }: VideoResultsProps) {
                 })}
               </div>
 
-              {/* Bouton de téléchargement */}
-              <button
-                onClick={() => handleDownload(video)}
-                className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all flex items-center justify-center"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger la vidéo
-              </button>
+              {/* Boutons d'action */}
+              <div className="flex gap-2">
+                {/* Bouton de téléchargement */}
+                <button
+                  onClick={() => handleDownload(video)}
+                  disabled={!video.file_url}
+                  className={`flex-1 px-4 py-2 font-medium rounded-lg transition-all flex items-center justify-center ${
+                    video.file_url
+                      ? "bg-gradient-to-r from-blue-600 to-cyan-600 text-white hover:from-blue-700 hover:to-cyan-700"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                  title={
+                    video.file_url
+                      ? "Télécharger depuis AWS S3"
+                      : "URL de téléchargement non disponible"
+                  }
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Télécharger
+                </button>
+
+                {/* Bouton d'ouverture dans un nouvel onglet */}
+                {video.file_url && (
+                  <button
+                    onClick={() =>
+                      video.file_url && window.open(video.file_url, "_blank")
+                    }
+                    className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center"
+                    title="Ouvrir dans un nouvel onglet"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         ))}

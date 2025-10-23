@@ -5,6 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { VideoJobStatus } from '@prisma/client';
 
 // Interface du payload webhook selon la documentation
 interface VideoWebhookPayload {
@@ -19,7 +21,9 @@ interface VideoWebhookPayload {
     videos: Array<{
       filename: string;
       file_path: string;
-      file_url: string | null;
+      file_url?: string | null;  // ⚠️ Ancienne clé (optionnelle)
+      url?: string | null;       // ✅ Nouvelle clé du backend
+      s3_key?: string;           // ✅ Clé S3 du backend
       file_size: number;
       format: string;
       duration_seconds: number;
@@ -67,6 +71,32 @@ setInterval(() => {
     }
   }
 }, 60000); // Nettoyer toutes les minutes
+
+// Helper: Convertir le statut webhook en VideoJobStatus Prisma
+function mapStatusToJobStatus(status: string): VideoJobStatus {
+  const statusMap: Record<string, VideoJobStatus> = {
+    'pending': 'PENDING',
+    'processing': 'PROCESSING',
+    'generating': 'PROCESSING',
+    'downloading': 'PROCESSING',
+    'completed': 'COMPLETED',
+    'failed': 'FAILED',
+  };
+  return statusMap[status.toLowerCase()] || 'PENDING';
+}
+
+// Helper: Calculer le pourcentage de progression
+function getProgressPercentage(status: string): number {
+  const progressMap: Record<string, number> = {
+    'pending': 0,
+    'processing': 25,
+    'generating': 50,
+    'downloading': 75,
+    'completed': 100,
+    'failed': 0,
+  };
+  return progressMap[status.toLowerCase()] || 0;
+}
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -126,35 +156,77 @@ export async function POST(request: NextRequest) {
       console.log('✅ [Video Webhook] Génération vidéo réussie!');
       console.log(`   📹 Nombre de vidéos: ${payload.data.num_videos}`);
       console.log(`   🎬 Prompt: "${payload.data.prompt || 'N/A'}"`);
+      console.log(`   🔗 URLs des vidéos:`, payload.data.videos.map(v => ({
+        filename: v.filename,
+        file_url: v.file_url,
+        has_url: !!v.file_url
+      })));
       
-      // TODO: Sauvegarder dans la base de données avec Prisma
-      // Exemple de structure pour le modèle Prisma VideoGeneration:
-      /*
-      await prisma.videoGeneration.create({
-        data: {
-          jobId: payload.job_id,
-          userId: userId, // À récupérer depuis le contexte
-          organizationId: organizationId, // À récupérer depuis le contexte
-          status: 'COMPLETED',
-          prompt: payload.data.prompt || '',
-          videos: {
-            create: payload.data.videos.map(video => ({
-              filename: video.filename,
-              filePath: video.file_path,
-              fileUrl: video.file_url,
-              fileSize: video.file_size,
-              format: video.format,
-              durationSeconds: video.duration_seconds,
-              aspectRatio: video.aspect_ratio,
-              width: video.dimensions.width,
-              height: video.dimensions.height,
-            }))
-          },
-          metadata: payload.data.metadata ? JSON.stringify(payload.data.metadata) : null,
-          completedAt: new Date(payload.data.generated_at),
-        }
+      // Récupérer la génération existante pour obtenir l'authorId
+      const existingGeneration = await prisma.videoGeneration.findUnique({
+        where: { id: payload.job_id },
+        select: { authorId: true, organizationId: true },
       });
-      */
+
+      if (!existingGeneration) {
+        console.error('❌ [Video Webhook] VideoGeneration introuvable:', payload.job_id);
+        return NextResponse.json(
+          { error: 'VideoGeneration not found', job_id: payload.job_id },
+          { status: 404 }
+        );
+      }
+
+      // Mettre à jour la génération avec les résultats
+      await prisma.videoGeneration.update({
+        where: { id: payload.job_id },
+        data: {
+          status: 'COMPLETED',
+          progress: 100,
+          message: 'Génération terminée avec succès',
+          completedAt: new Date(payload.data.generated_at),
+          processingTime: payload.data.metadata?.processing_time,
+          generationTime: payload.data.metadata?.generation_time,
+          downloadTime: payload.data.metadata?.download_time,
+          model: payload.data.metadata?.model_name || 'veo-2.0-generate-001',
+          modelVersion: payload.data.metadata?.model_version || '2.0',
+          // Créer les fichiers vidéo associés
+          videos: {
+            create: payload.data.videos.map(video => {
+              // ✅ Priorité: url (nouveau) > file_url (ancien) > null
+              const videoUrl = video.url || video.file_url || null;
+              const s3Key = video.s3_key || video.file_path;
+              
+              console.log(`🔗 Mapping vidéo: ${video.filename}`);
+              console.log(`   - video.url: ${video.url || 'null'}`);
+              console.log(`   - video.file_url: ${video.file_url || 'null'}`);
+              console.log(`   - videoUrl (final): ${videoUrl || 'null'}`);
+              console.log(`   - s3Key: ${s3Key}`);
+              
+              return {
+                filename: video.filename,
+                s3Key: s3Key,
+                fileUrl: videoUrl,
+                filePath: video.file_path,
+                fileSize: video.file_size,
+                format: video.format,
+                durationSeconds: video.duration_seconds,
+                aspectRatio: video.aspect_ratio,
+                width: video.dimensions.width,
+                height: video.dimensions.height,
+                metadata: payload.data?.metadata ? payload.data.metadata as any : undefined,
+              };
+            })
+          },
+        },
+      });
+
+      console.log(`   💾 ${payload.data.videos.length} fichier(s) vidéo sauvegardé(s)`);
+      
+      if (payload.data.metadata) {
+        console.log(`   ⏱️ Temps de traitement: ${payload.data.metadata.processing_time}s`);
+        console.log(`   🎨 Temps de génération: ${payload.data.metadata.generation_time}s`);
+        console.log(`   📥 Temps de téléchargement: ${payload.data.metadata.download_time}s`);
+      }
 
       // Marquer comme traité
       processedWebhooks.set(payload.job_id, Date.now());
@@ -173,16 +245,23 @@ export async function POST(request: NextRequest) {
     } else if (payload.status === 'failed') {
       console.error('❌ [Video Webhook] Génération vidéo échouée:', payload.job_id);
       
-      // TODO: Mettre à jour le statut dans la base de données
-      /*
+      // Mettre à jour le statut d'échec dans la base de données
+      const errorMessage = payload.data?.metadata?.prompt_used 
+        ? `Échec de génération pour: "${payload.data.metadata.prompt_used}"`
+        : 'Erreur inconnue lors de la génération';
+
       await prisma.videoGeneration.update({
-        where: { jobId: payload.job_id },
+        where: { id: payload.job_id },
         data: {
           status: 'FAILED',
-          error: payload.data?.error || 'Unknown error',
+          error: errorMessage,
+          progress: 0,
+          message: 'La génération a échoué',
+          completedAt: new Date(),
         }
       });
-      */
+
+      console.log(`   ❌ Erreur enregistrée: ${errorMessage}`);
 
       // Marquer comme traité même en cas d'échec
       processedWebhooks.set(payload.job_id, Date.now());
@@ -198,22 +277,35 @@ export async function POST(request: NextRequest) {
       // Statuts intermédiaires (pending, processing, generating, downloading)
       console.log(`📊 [Video Webhook] Mise à jour du statut: ${payload.status}`);
       
-      // TODO: Mettre à jour la progression dans la base de données
-      /*
+      // Mettre à jour la progression dans la base de données
+      const prismaStatus = mapStatusToJobStatus(payload.status);
+      const progress = getProgressPercentage(payload.status);
+      
+      // Messages descriptifs selon le statut
+      const statusMessages: Record<string, string> = {
+        'pending': 'En attente de traitement',
+        'processing': 'Traitement en cours',
+        'generating': 'Génération de la vidéo en cours',
+        'downloading': 'Téléchargement de la vidéo depuis Google',
+      };
+
       await prisma.videoGeneration.update({
-        where: { jobId: payload.job_id },
+        where: { id: payload.job_id },
         data: {
-          status: payload.status.toUpperCase(),
-          progress: getProgressPercentage(payload.status),
+          status: prismaStatus,
+          progress,
+          message: statusMessages[payload.status] || `Statut: ${payload.status}`,
         }
       });
-      */
+
+      console.log(`   📈 Progression: ${progress}% - ${statusMessages[payload.status]}`);
 
       return NextResponse.json({
         success: true,
         message: `Video generation status updated: ${payload.status}`,
         job_id: payload.job_id,
         status: payload.status,
+        progress,
       });
     }
 

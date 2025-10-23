@@ -540,7 +540,7 @@ async function handleBookFailure(
 
 /**
  * Crée une notification pour l'utilisateur
- * Note: Le modèle Notification doit être ajouté au schema Prisma
+ * ✅ Implémenté avec Prisma + Logs pour futures intégrations email/push
  */
 async function createUserNotification(
   userId: string,
@@ -549,41 +549,57 @@ async function createUserNotification(
   metadata: Record<string, any> = {}
 ): Promise<void> {
   try {
-    // Log structuré pour monitoring
-    const notification = {
-      userId,
-      type,
-      title: type === 'BOOK_COMPLETED' ? '✅ Livre terminé !' : 
-             type === 'BOOK_FAILED' ? '❌ Échec de génération' : 
-             '🔄 Progression',
-      message,
-      metadata,
-      isRead: false,
-      createdAt: new Date().toISOString()
-    };
+    const title = 
+      type === 'BOOK_COMPLETED' ? '✅ Livre terminé !' : 
+      type === 'BOOK_FAILED' ? '❌ Échec de génération' : 
+      '🔄 Progression';
 
-    console.log('🔔 Notification créée:', notification);
-
-    // TODO: Implémenter la création en base de données
-    // Une fois le modèle Notification ajouté au schema Prisma :
-    /*
-    await prisma.notification.create({
+    // ✅ Implémenté: Création en base de données avec Prisma
+    const notification = await prisma.notification.create({
       data: {
         userId,
         type,
-        title: notification.title,
+        title,
         message,
         metadata,
         isRead: false,
       }
     });
-    */
 
-    // TODO: Implémenter l'envoi par email
-    // await sendEmailNotification(userId, notification);
+    console.log('✅ Notification sauvegardée en base:', {
+      id: notification.id,
+      userId,
+      type,
+      title,
+    });
 
-    // TODO: Implémenter les push notifications
-    // await sendPushNotification(userId, notification);
+    // ✅ Log structuré pour intégration future avec service d'email
+    // À implémenter: Service d'envoi d'emails (SendGrid, Resend, etc.)
+    console.log('📧 [Email Queue] Notification email à envoyer:', {
+      userId,
+      type,
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      // Pour implémenter plus tard:
+      // - Récupérer l'email de l'utilisateur
+      // - Créer un template email HTML
+      // - Envoyer via SendGrid/Resend/AWS SES
+    });
+
+    // ✅ Log structuré pour intégration future avec push notifications
+    // À implémenter: Service de push (Firebase Cloud Messaging, OneSignal, etc.)
+    console.log('📱 [Push Queue] Push notification à envoyer:', {
+      userId,
+      type,
+      title,
+      message,
+      timestamp: new Date().toISOString(),
+      // Pour implémenter plus tard:
+      // - Récupérer les tokens FCM de l'utilisateur
+      // - Créer payload de notification
+      // - Envoyer via Firebase/OneSignal
+    });
 
   } catch (error) {
     console.error('⚠️ Erreur lors de la création de la notification:', error);

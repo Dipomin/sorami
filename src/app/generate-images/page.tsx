@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { ImageGenerationForm } from "@/components/ImageGenerationForm";
 import { ImageProgress } from "@/components/ImageProgress";
 import { ImageResults } from "@/components/ImageResults";
+import { UserImagesGallery } from "@/components/UserImagesGallery";
 import { useImageGeneration } from "@/hooks/useImageGeneration";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -17,6 +18,7 @@ export default function GenerateImagesPage() {
     useImageGeneration();
 
   const [result, setResult] = useState<ImageResultResponse | null>(null);
+  const [refreshGallery, setRefreshGallery] = useState(0);
 
   const handleSubmit = async (data: ImageGenerationRequest) => {
     setResult(null);
@@ -24,6 +26,8 @@ export default function GenerateImagesPage() {
     try {
       const generationResult = await generateImage(data);
       setResult(generationResult);
+      // Déclencher le rafraîchissement de la galerie
+      setRefreshGallery((prev) => prev + 1);
     } catch (err) {
       console.error("Erreur lors de la génération:", err);
     }
@@ -202,6 +206,11 @@ export default function GenerateImagesPage() {
             </div>
           </div>
         )}
+
+        {/* Galerie des images générées précédemment */}
+        <div className="mt-12">
+          <UserImagesGallery key={refreshGallery} />
+        </div>
       </div>
     </div>
   );

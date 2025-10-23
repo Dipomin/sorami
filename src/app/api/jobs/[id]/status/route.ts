@@ -44,8 +44,48 @@ export async function GET(
       });
     }
     
-    // Pour les jobs en cours, vérifier le statut avec CrewAI
-    // TODO: Implémenter la vérification du statut avec CrewAI
+    // Pour les jobs en cours, vérifier le statut avec CrewAI backend
+    // ✅ Implémenté: Polling du backend Flask pour mise à jour du statut
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const token = request.headers.get('authorization')?.split(' ')[1];
+      
+      const backendResponse = await fetch(
+        `${backendUrl}/api/jobs/${jobId}/status`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      if (backendResponse.ok) {
+        const backendData = await backendResponse.json();
+        
+        // Mettre à jour le job dans Prisma si le statut a changé
+        if (backendData.status !== job.status || backendData.progress !== job.progress) {
+          await prisma.bookJob.update({
+            where: { id: jobId },
+            data: {
+              status: backendData.status,
+              progress: backendData.progress || job.progress,
+              error: backendData.error || job.error,
+            },
+          });
+        }
+        
+        return NextResponse.json({
+          status: backendData.status,
+          progress: backendData.progress || job.progress,
+          result: backendData.result || job.result,
+          error: backendData.error || undefined,
+        });
+      }
+    } catch (backendError) {
+      console.error('⚠️ Backend CrewAI non disponible, utilisation des données Prisma:', backendError);
+      // Fallback: retourner les données de Prisma si le backend est indisponible
+    }
     
     return NextResponse.json({
       status: job.status,

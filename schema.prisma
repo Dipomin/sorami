@@ -55,6 +55,7 @@ model User {
   blogJobs                BlogJob[]
   imageGenerations        ImageGeneration[]
   videoGenerations        VideoGeneration[]
+  notifications           Notification[]
 
   @@map("users")
 }
@@ -1053,7 +1054,7 @@ model ImageGeneration {
   message  String?        @db.Text
 
   // Métadonnées IA
-  model          String  @default("gemini-2.0-flash-exp")
+  model          String  @default("gemini-2.5-flash-preview")
   modelVersion   String?
   processingTime Float?
 
@@ -1185,4 +1186,54 @@ model VideoFile {
   generation   VideoGeneration @relation(fields: [generationId], references: [id], onDelete: Cascade)
 
   @@map("video_files")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id String @id @default(cuid())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Type de notification
+  type NotificationType @default(INFO)
+
+  // Contenu
+  title   String
+  message String @db.Text
+
+  // Métadonnées (JSON flexible pour différents types)
+  metadata Json?
+
+  // Statut
+  isRead Boolean @default(false)
+  readAt DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  BOOK_COMPLETED
+  BOOK_FAILED
+  BOOK_PROGRESS
+  VIDEO_COMPLETED
+  VIDEO_FAILED
+  IMAGE_COMPLETED
+  IMAGE_FAILED
+  BLOG_COMPLETED
+  BLOG_FAILED
 }

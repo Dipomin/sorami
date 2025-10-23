@@ -11,6 +11,7 @@ import Link from "next/link";
 import VideoGenerationForm from "@/components/VideoGenerationForm";
 import VideoProgress from "@/components/VideoProgress";
 import VideoResults from "@/components/VideoResults";
+import UserVideosGallery from "@/components/UserVideosGallery";
 import { useVideoGeneration } from "@/hooks/useVideoGeneration";
 
 export default function GenerateVideosPage() {
@@ -212,6 +213,11 @@ export default function GenerateVideosPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Galerie des vidéos générées */}
+        <div className="mt-12">
+          <UserVideosGallery />
         </div>
 
         {/* Section d'exemples */}

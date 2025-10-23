@@ -2,10 +2,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { uploadBookFile, getBookFiles, getBookFile, getDownloadUrl } from '@/lib/s3-storage'
+import { requireAuth } from '@/lib/auth'
 
 // Upload d'un fichier de livre
 export async function POST(request: NextRequest) {
   try {
+    // Récupérer l'utilisateur authentifié
+    const user = await requireAuth();
+    
     const formData = await request.formData()
     const file = formData.get('file') as File
     const bookId = formData.get('bookId') as string
@@ -30,7 +34,7 @@ export async function POST(request: NextRequest) {
       filename: file.name,
       metadata: {
         originalSize: file.size,
-        uploadedBy: 'user' // TODO: récupérer l'utilisateur actuel
+        uploadedBy: user.id // ✅ Utilisateur authentifié récupéré
       }
     })
     

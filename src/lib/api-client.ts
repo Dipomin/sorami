@@ -444,7 +444,8 @@ export async function createImageGeneration(
   }
 
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/images/generate`, {
+    // Utiliser l'API Next.js qui créera l'entrée Prisma avant d'appeler le backend
+    const response = await fetch('/api/images/generate', {
       method: 'POST',
       headers: createAuthHeaders(token),
       body: JSON.stringify(data),
@@ -463,18 +464,15 @@ export async function createImageGeneration(
 }
 
 /**
- * Vérifier le statut d'une génération d'images
+ * Vérifier le statut d'une génération d'images (depuis la base de données Next.js)
  * @param jobId ID du job
- * @param token Token d'authentification Clerk (obligatoire)
+ * @param token Token d'authentification Clerk (ignoré pour les routes Next.js)
  */
 export async function fetchImageStatus(jobId: string, token: string): Promise<ImageStatusResponse> {
-  if (!token) {
-    throw new Error('Token d\'authentification manquant');
-  }
-
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/images/status/${jobId}`, {
-      headers: createAuthHeaders(token),
+    // Les routes Next.js utilisent les cookies Clerk automatiquement
+    const response = await fetch(`/api/images/${jobId}/status`, {
+      credentials: 'include', // Important pour envoyer les cookies
     });
     
     if (!response.ok) {
@@ -489,18 +487,15 @@ export async function fetchImageStatus(jobId: string, token: string): Promise<Im
 }
 
 /**
- * Récupérer les résultats d'une génération d'images
+ * Récupérer les résultats d'une génération d'images (depuis la base de données Next.js)
  * @param jobId ID du job
- * @param token Token d'authentification Clerk (obligatoire)
+ * @param token Token d'authentification Clerk (ignoré pour les routes Next.js)
  */
 export async function fetchImageResult(jobId: string, token: string): Promise<ImageResultResponse> {
-  if (!token) {
-    throw new Error('Token d\'authentification manquant');
-  }
-
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/images/result/${jobId}`, {
-      headers: createAuthHeaders(token),
+    // Les routes Next.js utilisent les cookies Clerk automatiquement
+    const response = await fetch(`/api/images/${jobId}/result`, {
+      credentials: 'include', // Important pour envoyer les cookies
     });
     
     if (!response.ok) {
@@ -519,14 +514,14 @@ export async function fetchImageResult(jobId: string, token: string): Promise<Im
  * @param jobId ID du job
  * @param token Token d'authentification Clerk (obligatoire)
  * @param onProgress Callback appelé à chaque mise à jour du statut
- * @param maxAttempts Nombre maximum de tentatives (défaut: 30)
+ * @param maxAttempts Nombre maximum de tentatives (défaut: 60 = 2 minutes)
  * @param intervalMs Intervalle entre les vérifications en ms (défaut: 2000)
  */
 export async function pollImageGenerationStatus(
   jobId: string,
   token: string,
   onProgress?: (status: ImageStatusResponse) => void,
-  maxAttempts: number = 30,
+  maxAttempts: number = 60,
   intervalMs: number = 2000
 ): Promise<ImageResultResponse> {
   if (!token) {
@@ -538,15 +533,19 @@ export async function pollImageGenerationStatus(
   while (attempts < maxAttempts) {
     const statusData = await fetchImageStatus(jobId, token);
     
+    console.log(`[Polling Image ${jobId}] Tentative ${attempts + 1}/${maxAttempts} - Statut: ${statusData.status} - Progrès: ${statusData.progress}%`);
+    
     if (onProgress) {
       onProgress(statusData);
     }
     
     if (statusData.status === 'COMPLETED') {
+      console.log(`[Polling Image ${jobId}] ✅ Génération terminée, récupération des résultats...`);
       return await fetchImageResult(jobId, token);
     }
     
     if (statusData.status === 'FAILED') {
+      console.error(`[Polling Image ${jobId}] ❌ Génération échouée:`, statusData.message);
       throw new Error(statusData.message || 'La génération a échoué');
     }
     
@@ -554,6 +553,7 @@ export async function pollImageGenerationStatus(
     await new Promise(resolve => setTimeout(resolve, intervalMs));
   }
   
+  console.error(`[Polling Image ${jobId}] ⏰ Timeout après ${maxAttempts} tentatives`);
   throw new Error('Timeout: La génération prend trop de temps');
 }
 
@@ -582,7 +582,8 @@ export async function createVideoGeneration(
   }
 
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/videos/generate`, {
+    // Utiliser l'API Next.js qui créera l'entrée Prisma avant d'appeler le backend
+    const response = await fetch('/api/videos/generate', {
       method: 'POST',
       headers: createAuthHeaders(token),
       body: JSON.stringify(request),
@@ -603,16 +604,13 @@ export async function createVideoGeneration(
 /**
  * Récupérer le statut d'une génération de vidéo
  * @param jobId ID du job
- * @param token Token d'authentification Clerk (obligatoire)
+ * @param token Token d'authentification Clerk (ignoré pour les routes Next.js)
  */
 export async function fetchVideoStatus(jobId: string, token: string): Promise<VideoStatusResponse> {
-  if (!token) {
-    throw new Error('Token d\'authentification manquant');
-  }
-
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/videos/status/${jobId}`, {
-      headers: createAuthHeaders(token),
+    // Les routes Next.js utilisent les cookies Clerk automatiquement
+    const response = await fetch(`/api/videos/${jobId}/status`, {
+      credentials: 'include', // Important pour envoyer les cookies
     });
     
     if (!response.ok) {
@@ -629,16 +627,13 @@ export async function fetchVideoStatus(jobId: string, token: string): Promise<Vi
 /**
  * Récupérer les résultats d'une génération de vidéo
  * @param jobId ID du job
- * @param token Token d'authentification Clerk (obligatoire)
+ * @param token Token d'authentification Clerk (ignoré pour les routes Next.js)
  */
 export async function fetchVideoResult(jobId: string, token: string): Promise<VideoResultResponse> {
-  if (!token) {
-    throw new Error('Token d\'authentification manquant');
-  }
-
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/videos/result/${jobId}`, {
-      headers: createAuthHeaders(token),
+    // Les routes Next.js utilisent les cookies Clerk automatiquement
+    const response = await fetch(`/api/videos/${jobId}/result`, {
+      credentials: 'include', // Important pour envoyer les cookies
     });
     
     if (!response.ok) {
