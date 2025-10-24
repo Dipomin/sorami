@@ -56,6 +56,8 @@ model User {
   imageGenerations        ImageGeneration[]
   videoGenerations        VideoGeneration[]
   notifications           Notification[]
+  transactions            Transaction[]
+  paystackSubscriptions   PaystackSubscription[]
 
   @@map("users")
 }
@@ -70,10 +72,14 @@ model Organization {
   slug        String  @unique
   description String? @db.Text
   website     String?
-  logo        String?
+  format   String
+  width    Int?
+  height   Int?
+  aspectRatio String?
 
   // Configuration
   settings Json @default("{}")
+
   branding Json @default("{}")
 
   // Limites et quotas
@@ -81,11 +87,13 @@ model Organization {
   maxUsers         Int      @default(1)
   maxBooks         Int      @default(10)
   maxBooksPerMonth Int      @default(5)
+
   maxStorageGB     Int      @default(1)
 
   // Statut
   status      OrganizationStatus @default(ACTIVE)
   trialEndsAt DateTime?
+
 
   // Métadonnées
   createdAt DateTime @default(now())
@@ -96,8 +104,10 @@ model Organization {
   books            Book[]
   jobs             BookJob[]
   subscriptions    Subscription[]
+
   invoices         Invoice[]
   usageMetrics     UsageMetric[]
+
   apiKeys          ApiKey[]
   blogArticles     BlogArticle[]
   blogJobs         BlogJob[]
@@ -108,9 +118,12 @@ model Organization {
 }
 
 model OrganizationMember {
+
   id             String           @id @default(cuid())
+
   userId         String
   organizationId String
+
   role           OrganizationRole @default(MEMBER)
   status         MembershipStatus @default(ACTIVE)
 
@@ -122,8 +135,10 @@ model OrganizationMember {
   updatedAt DateTime @updatedAt
 
   // Relations
+
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
 
   @@unique([userId, organizationId])
   @@map("organization_members")
@@ -1236,4 +1251,75 @@ enum NotificationType {
   IMAGE_FAILED
   BLOG_COMPLETED
   BLOG_FAILED
+}
+
+// ============================================================================
+// PAYMENTS & SUBSCRIPTIONS (Paystack Integration)
+// ============================================================================
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PaystackSubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+model PaystackPlan {
+  id          String   @id @default(cuid())
+  paystackId  String   @unique
+  name        String
+  amount      Int
+  interval    String   // "monthly", "yearly", etc.
+  currency    String   @default("XOF")
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subscriptions PaystackSubscription[]
+
+  @@map("paystack_plans")
+}
+
+model Transaction {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reference    String        @unique
+  amount       Int
+  currency     String        @default("XOF")
+  status       PaymentStatus @default(PENDING)
+  providerData Json?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([reference])
+  @@index([status])
+  @@map("transactions")
+}
+
+model PaystackSubscription {
+  id                String                       @id @default(cuid())
+  userId            String
+  user              User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paystackId        String                       @unique
+  planId            String
+  plan              PaystackPlan                 @relation(fields: [planId], references: [id])
+  status            PaystackSubscriptionStatus   @default(ACTIVE)
+  currentPeriodEnd  DateTime?
+  cancelAtPeriodEnd Boolean                      @default(false)
+  providerData      Json?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("paystack_subscriptions")
 }

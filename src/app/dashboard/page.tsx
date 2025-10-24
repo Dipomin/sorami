@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -12,6 +12,8 @@ import {
   Clock,
   Zap,
   ArrowRight,
+  Loader2,
+  BarChart3,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -52,41 +54,77 @@ const quickActions = [
   },
 ];
 
-const stats = [
-  { label: "Images générées", value: "47", icon: Image, change: "+12%" },
-  { label: "Vidéos créées", value: "8", icon: Video, change: "+3%" },
-  { label: "Articles publiés", value: "23", icon: FileText, change: "+18%" },
-  { label: "Ebooks complétés", value: "5", icon: BookOpen, change: "+2%" },
-];
+interface DashboardStats {
+  images: { total: number; change: string };
+  videos: { total: number; change: string };
+  articles: { total: number; change: string };
+  books: { total: number; change: string };
+}
 
-const recentActivity = [
-  {
-    type: "image",
-    title: "Image d'un chef africain dans un bureau moderne",
-    time: "Il y a 2 heures",
-    status: "completed",
-  },
-  {
-    type: "article",
-    title: "L'impact de l'IA dans l'éducation en Afrique",
-    time: "Il y a 5 heures",
-    status: "completed",
-  },
-  {
-    type: "video",
-    title: "Vidéo inspirante sur l'innovation",
-    time: "Hier",
-    status: "processing",
-  },
-  {
-    type: "ebook",
-    title: "Guide du marketing digital en 2025",
-    time: "Il y a 2 jours",
-    status: "completed",
-  },
-];
+interface Activity {
+  type: "image" | "video" | "article" | "book";
+  title: string;
+  time: string;
+  status: "completed" | "processing" | "pending" | "failed";
+  id: string;
+}
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Charger les statistiques réelles
+    Promise.all([
+      fetch("/api/dashboard/stats").then((res) => res.json()),
+      fetch("/api/dashboard/activity").then((res) => res.json()),
+    ])
+      .then(([statsData, activityData]) => {
+        if (statsData.success) {
+          setStats(statsData.stats);
+        }
+        if (activityData.success) {
+          setActivities(activityData.activities);
+        }
+      })
+      .catch((error) => {
+        console.error("Error loading dashboard data:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const displayStats = stats
+    ? [
+        {
+          label: "Images générées",
+          value: stats.images.total.toString(),
+          icon: Image,
+          change: stats.images.change,
+        },
+        {
+          label: "Vidéos créées",
+          value: stats.videos.total.toString(),
+          icon: Video,
+          change: stats.videos.change,
+        },
+        {
+          label: "Articles publiés",
+          value: stats.articles.total.toString(),
+          icon: FileText,
+          change: stats.articles.change,
+        },
+        {
+          label: "Ebooks complétés",
+          value: stats.books.total.toString(),
+          icon: BookOpen,
+          change: stats.books.change,
+        },
+      ]
+    : [];
+
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto space-y-8">
@@ -116,31 +154,60 @@ export default function DashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl p-6 hover:border-primary-500/50 transition-all group"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-primary-500/10 group-hover:bg-primary-500/20 transition-colors">
-                  <stat.icon className="w-6 h-6 text-primary-400" />
+          {loading
+            ? // Skeleton loader
+              Array.from({ length: 4 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl p-6 animate-pulse"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 bg-dark-800 rounded-xl" />
+                    <div className="w-12 h-6 bg-dark-800 rounded" />
+                  </div>
+                  <div className="w-16 h-8 bg-dark-800 rounded mb-2" />
+                  <div className="w-24 h-4 bg-dark-800 rounded" />
                 </div>
-                <div className="flex items-center gap-1 text-green-400 text-sm">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>{stat.change}</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-white mb-1">
-                  {stat.value}
-                </p>
-                <p className="text-dark-400 text-sm">{stat.label}</p>
-              </div>
-            </motion.div>
-          ))}
+              ))
+            : displayStats.map((stat, index) => (
+                <motion.div
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl p-6 hover:border-primary-500/50 transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-xl bg-primary-500/10 group-hover:bg-primary-500/20 transition-colors">
+                      <stat.icon className="w-6 h-6 text-primary-400" />
+                    </div>
+                    <div className="flex items-center gap-1 text-green-400 text-sm">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>{stat.change}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold text-white mb-1">
+                      {stat.value}
+                    </p>
+                    <p className="text-dark-400 text-sm">{stat.label}</p>
+                  </div>
+                </motion.div>
+              ))}
+        </div>
+
+        {/* Link to Detailed Stats */}
+        <div className="flex justify-center">
+          <Link
+            href="/dashboard/stats"
+            className="group inline-flex items-center gap-2 px-6 py-3 bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-xl hover:border-primary-500/50 transition-all"
+          >
+            <BarChart3 className="w-5 h-5 text-primary-400" />
+            <span className="text-white font-medium">
+              Voir les statistiques détaillées
+            </span>
+            <ArrowRight className="w-4 h-4 text-dark-400 group-hover:text-primary-400 group-hover:translate-x-1 transition-all" />
+          </Link>
         </div>
 
         {/* Quick Actions */}
@@ -196,64 +263,100 @@ export default function DashboardPage() {
               Activité récente
             </h2>
             <div className="bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl divide-y divide-dark-800/50">
-              {recentActivity.map((activity, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="p-6 hover:bg-dark-800/30 transition-colors group cursor-pointer"
-                >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className={cn(
-                        "p-3 rounded-xl",
-                        activity.type === "image" && "bg-pink-500/10",
-                        activity.type === "video" && "bg-purple-500/10",
-                        activity.type === "article" && "bg-blue-500/10",
-                        activity.type === "ebook" && "bg-violet-500/10"
-                      )}
-                    >
-                      {activity.type === "image" && (
-                        <Image className="w-5 h-5 text-pink-400" />
-                      )}
-                      {activity.type === "video" && (
-                        <Video className="w-5 h-5 text-purple-400" />
-                      )}
-                      {activity.type === "article" && (
-                        <FileText className="w-5 h-5 text-blue-400" />
-                      )}
-                      {activity.type === "ebook" && (
-                        <BookOpen className="w-5 h-5 text-violet-400" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium mb-1 group-hover:text-primary-300 transition-colors truncate">
-                        {activity.title}
-                      </p>
-                      <div className="flex items-center gap-3 text-sm text-dark-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {activity.time}
-                        </span>
-                        <span
-                          className={cn(
-                            "px-2 py-1 rounded-full text-xs font-medium",
-                            activity.status === "completed" &&
-                              "bg-green-500/10 text-green-400",
-                            activity.status === "processing" &&
-                              "bg-yellow-500/10 text-yellow-400"
-                          )}
-                        >
-                          {activity.status === "completed"
-                            ? "Terminé"
-                            : "En cours"}
-                        </span>
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="p-6">
+                    <div className="flex items-start gap-4 animate-pulse">
+                      <div className="w-[52px] h-[52px] rounded-xl bg-dark-800/50" />
+                      <div className="flex-1 space-y-3">
+                        <div className="h-5 bg-dark-800/50 rounded w-3/4" />
+                        <div className="flex items-center gap-3">
+                          <div className="h-4 bg-dark-800/50 rounded w-24" />
+                          <div className="h-6 bg-dark-800/50 rounded-full w-20" />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </motion.div>
-              ))}
+                ))
+              ) : activities.length > 0 ? (
+                activities.map((activity, index) => (
+                  <motion.div
+                    key={activity.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="p-6 hover:bg-dark-800/30 transition-colors group cursor-pointer"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={cn(
+                          "p-3 rounded-xl",
+                          activity.type === "image" && "bg-pink-500/10",
+                          activity.type === "video" && "bg-purple-500/10",
+                          activity.type === "article" && "bg-blue-500/10",
+                          activity.type === "book" && "bg-violet-500/10"
+                        )}
+                      >
+                        {activity.type === "image" && (
+                          <Image className="w-5 h-5 text-pink-400" />
+                        )}
+                        {activity.type === "video" && (
+                          <Video className="w-5 h-5 text-purple-400" />
+                        )}
+                        {activity.type === "article" && (
+                          <FileText className="w-5 h-5 text-blue-400" />
+                        )}
+                        {activity.type === "book" && (
+                          <BookOpen className="w-5 h-5 text-violet-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium mb-1 group-hover:text-primary-300 transition-colors truncate">
+                          {activity.title}
+                        </p>
+                        <div className="flex items-center gap-3 text-sm text-dark-400">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {activity.time}
+                          </span>
+                          <span
+                            className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium",
+                              activity.status === "completed" &&
+                                "bg-green-500/10 text-green-400",
+                              activity.status === "processing" &&
+                                "bg-yellow-500/10 text-yellow-400",
+                              activity.status === "pending" &&
+                                "bg-blue-500/10 text-blue-400",
+                              activity.status === "failed" &&
+                                "bg-red-500/10 text-red-400"
+                            )}
+                          >
+                            {activity.status === "completed" && "Terminé"}
+                            {activity.status === "processing" && "En cours"}
+                            {activity.status === "pending" && "En attente"}
+                            {activity.status === "failed" && "Échoué"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
+              ) : (
+                // Empty state
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 rounded-full bg-dark-800/50 flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-8 h-8 text-dark-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    Aucune activité récente
+                  </h3>
+                  <p className="text-dark-400 text-sm">
+                    Commencez à créer du contenu pour voir votre activité ici.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

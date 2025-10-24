@@ -1,0 +1,208 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import {
+  Receipt,
+  Download,
+  Calendar,
+  CreditCard,
+  CheckCircle,
+  XCircle,
+  Clock,
+  FileText,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+
+interface Transaction {
+  id: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  status: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED";
+  createdAt: string;
+  providerData: any;
+}
+
+export default function PaymentsHistoryPage() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/payments/history");
+      const data = await res.json();
+      if (data.success) {
+        setTransactions(data.transactions || []);
+      }
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const styles = {
+      SUCCESS: {
+        bg: "bg-green-500/10",
+        text: "text-green-400",
+        border: "border-green-500/30",
+        icon: CheckCircle,
+      },
+      PENDING: {
+        bg: "bg-yellow-500/10",
+        text: "text-yellow-400",
+        border: "border-yellow-500/30",
+        icon: Clock,
+      },
+      FAILED: {
+        bg: "bg-red-500/10",
+        text: "text-red-400",
+        border: "border-red-500/30",
+        icon: XCircle,
+      },
+      REFUNDED: {
+        bg: "bg-blue-500/10",
+        text: "text-blue-400",
+        border: "border-blue-500/30",
+        icon: FileText,
+      },
+    };
+
+    const labels = {
+      SUCCESS: "Confirmé",
+      PENDING: "En attente",
+      FAILED: "Échoué",
+      REFUNDED: "Remboursé",
+    };
+
+    const style = styles[status as keyof typeof styles] || styles.PENDING;
+    const Icon = style.icon;
+
+    return (
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 ${style.bg} ${style.text} border ${style.border}`}
+      >
+        <Icon className="w-3 h-3" />
+        {labels[status as keyof typeof labels] || status}
+      </span>
+    );
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="max-w-6xl mx-auto p-6">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-4xl font-display font-bold text-white mb-2 flex items-center gap-3">
+                <Receipt className="w-10 h-10 text-primary-400" />
+                Historique des Paiements
+              </h1>
+              <p className="text-dark-300">
+                Consultez toutes vos transactions et téléchargez vos factures
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {transactions.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20 bg-dark-900/40 rounded-2xl border border-dark-800"
+          >
+            <Receipt className="w-16 h-16 mx-auto mb-4 text-dark-500" />
+            <h3 className="text-xl font-bold text-white mb-2">
+              Aucune transaction
+            </h3>
+            <p className="text-dark-400 mb-6">Vos paiements apparaîtront ici</p>
+            <Button onClick={() => router.push("/pricing")}>
+              Voir les offres
+            </Button>
+          </motion.div>
+        ) : (
+          <div className="space-y-4">
+            {transactions.map((tx, index) => (
+              <motion.div
+                key={tx.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-dark-900/40 backdrop-blur-xl border border-dark-700 rounded-2xl p-6 hover:border-primary-500/50 transition-all"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CreditCard className="w-5 h-5 text-primary-400" />
+                      <span className="text-lg font-semibold text-white">
+                        {(tx.amount / 100).toLocaleString("fr-FR")}{" "}
+                        {tx.currency}
+                      </span>
+                      {getStatusBadge(tx.status)}
+                    </div>
+
+                    <div className="flex items-center gap-4 text-sm text-dark-400">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        <span>Réf: {tx.reference}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          {formatDistanceToNow(new Date(tx.createdAt), {
+                            addSuffix: true,
+                            locale: fr,
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {tx.status === "SUCCESS" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        // Download invoice functionality
+                        alert("Téléchargement de la facture (à implémenter)");
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Facture
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+}

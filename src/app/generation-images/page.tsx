@@ -11,6 +11,7 @@ import {
   Wand2,
   ArrowLeft,
   Images,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -64,27 +65,52 @@ export default function GenerateImagesPage() {
   const [result, setResult] = useState<ImageResultResponse | null>(null);
   const [recentImages, setRecentImages] = useState<UserImage[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
 
   // Charger les images récentes de l'utilisateur
   useEffect(() => {
     const fetchRecentImages = async () => {
       try {
         setLoadingGallery(true);
+        setGalleryError(null);
+        console.log("🔍 Chargement des images récentes...");
         const response = await fetch("/api/images/user");
 
+        console.log("📡 Réponse API:", response.status, response.statusText);
+
         if (!response.ok) {
+          const errorData = await response.json();
+          console.error("❌ Erreur API:", errorData);
+          setGalleryError(errorData.error || "Erreur de chargement");
           throw new Error("Erreur lors du chargement des images");
         }
 
         const data = await response.json();
+        console.log("📦 Données reçues:", data);
+        console.log("📊 Nombre de générations:", data.generations?.length || 0);
 
         // Extraire toutes les images de toutes les générations
         const allImages: UserImage[] = [];
         data.generations.forEach((gen: UserImageGeneration) => {
-          gen.images.forEach((img) => {
-            allImages.push(img);
-          });
+          console.log(
+            `📸 Génération ${gen.id}:`,
+            gen.images?.length || 0,
+            "images"
+          );
+          // Ne prendre que les générations qui ont vraiment des images
+          if (gen.images && gen.images.length > 0) {
+            gen.images.forEach((img) => {
+              // Vérifier que l'image a bien une URL
+              if (img.fileUrl) {
+                allImages.push(img);
+              } else {
+                console.warn(`⚠️ Image ${img.id} sans URL, ignorée`);
+              }
+            });
+          }
         });
+
+        console.log("🖼️ Total images extraites:", allImages.length);
 
         // Trier par date de création décroissante et prendre les 8 dernières
         const sortedImages = allImages
@@ -94,9 +120,12 @@ export default function GenerateImagesPage() {
           )
           .slice(0, 8);
 
+        console.log("✅ Images à afficher:", sortedImages.length);
+        console.log("🎯 Première image URL:", sortedImages[0]?.fileUrl);
+
         setRecentImages(sortedImages);
       } catch (error) {
-        console.error("Erreur chargement galerie:", error);
+        console.error("💥 Erreur chargement galerie:", error);
       } finally {
         setLoadingGallery(false);
       }
@@ -414,6 +443,12 @@ export default function GenerateImagesPage() {
         >
           <h2 className="text-2xl font-display font-bold text-white mb-6">
             Vos images récentes
+            {!loadingGallery && (
+              <span className="ml-3 text-sm font-normal text-dark-400">
+                ({recentImages.length} image
+                {recentImages.length !== 1 ? "s" : ""})
+              </span>
+            )}
           </h2>
 
           {loadingGallery ? (
@@ -428,6 +463,22 @@ export default function GenerateImagesPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : galleryError ? (
+            <div className="text-center py-12 bg-red-900/20 backdrop-blur-sm border border-red-800/50 rounded-xl">
+              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
+              <p className="text-red-400 font-medium mb-2">
+                Erreur de chargement
+              </p>
+              <p className="text-red-300/70 text-sm">{galleryError}</p>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+                className="mt-4"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Réessayer
+              </Button>
             </div>
           ) : recentImages.length > 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
