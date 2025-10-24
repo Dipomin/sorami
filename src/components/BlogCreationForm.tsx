@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Sparkles, FileText, Zap } from "lucide-react";
 import { BlogRequest } from "../types/blog-api";
 
 interface BlogCreationFormProps {
@@ -36,16 +38,25 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Créer un article de blog SEO avec l'IA
-      </h2>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl p-8 ${className}`}
+    >
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+          <Sparkles className="w-6 h-6 text-white" />
+        </div>
+        <h2 className="text-2xl font-display font-bold text-white">
+          Créer un article de blog SEO avec l'IA
+        </h2>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label
             htmlFor="topic"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-dark-300 mb-2"
           >
             Sujet de l'article *
           </label>
@@ -55,12 +66,12 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
             name="topic"
             value={formData.topic}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 bg-dark-800/50 border border-dark-700/50 rounded-xl text-white placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             placeholder="ex: Intelligence Artificielle et Marketing Digital en 2025"
             required
             disabled={isLoading}
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-dark-400">
             Le sujet principal de votre article de blog
           </p>
         </div>
@@ -68,7 +79,7 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
         <div>
           <label
             htmlFor="goal"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-dark-300 mb-2"
           >
             Objectif et contexte
           </label>
@@ -78,11 +89,11 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
             value={formData.goal}
             onChange={handleChange}
             rows={6}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 bg-dark-800/50 border border-dark-700/50 rounded-xl text-white placeholder:text-dark-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all resize-none"
             placeholder="Décrivez l'objectif de l'article, le public cible, le ton souhaité, et les points clés à couvrir..."
             disabled={isLoading}
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-dark-400">
             Optionnel : Plus votre description est détaillée, meilleur sera le
             résultat
           </p>
@@ -91,7 +102,7 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
         <div>
           <label
             htmlFor="target_word_count"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium text-dark-300 mb-2"
           >
             Nombre de mots cible
           </label>
@@ -104,20 +115,20 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
             min={800}
             max={5000}
             step={100}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full px-4 py-3 bg-dark-800/50 border border-dark-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
             disabled={isLoading}
           />
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-dark-400">
             Entre 800 et 5000 mots. Recommandé : 2000-2500 mots pour un article
             complet
           </p>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 flex gap-2">
             <button
               type="button"
               onClick={() =>
                 setFormData((prev) => ({ ...prev, target_word_count: 1200 }))
               }
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+              className="px-4 py-2 text-sm bg-dark-800/50 hover:bg-dark-700/50 border border-dark-700/50 hover:border-primary-500/50 text-dark-300 hover:text-white rounded-lg transition-all"
               disabled={isLoading}
             >
               Court (1200)
@@ -127,7 +138,7 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
               onClick={() =>
                 setFormData((prev) => ({ ...prev, target_word_count: 2000 }))
               }
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+              className="px-4 py-2 text-sm bg-dark-800/50 hover:bg-dark-700/50 border border-dark-700/50 hover:border-primary-500/50 text-dark-300 hover:text-white rounded-lg transition-all"
               disabled={isLoading}
             >
               Standard (2000)
@@ -137,7 +148,7 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
               onClick={() =>
                 setFormData((prev) => ({ ...prev, target_word_count: 3000 }))
               }
-              className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded"
+              className="px-4 py-2 text-sm bg-dark-800/50 hover:bg-dark-700/50 border border-dark-700/50 hover:border-primary-500/50 text-dark-300 hover:text-white rounded-lg transition-all"
               disabled={isLoading}
             >
               Long (3000)
@@ -148,34 +159,63 @@ export const BlogCreationForm: React.FC<BlogCreationFormProps> = ({
         <button
           type="submit"
           disabled={isLoading || !formData.topic}
-          className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="w-full bg-gradient-to-r from-primary-600 to-accent-600 text-white font-semibold py-4 px-6 rounded-xl hover:shadow-glow-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-dark-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
         >
           {isLoading ? (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-              Génération en cours...
+            <div className="flex items-center justify-center gap-2">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>Génération en cours...</span>
             </div>
           ) : (
-            "Générer l'article"
+            <div className="flex items-center justify-center gap-2">
+              <Zap className="w-5 h-5" />
+              <span>Générer l'article</span>
+            </div>
           )}
         </button>
 
-        <div className="mt-4 p-4 bg-blue-50 rounded-md">
-          <h3 className="text-sm font-semibold text-blue-900 mb-2">
-            📊 Votre article inclura :
-          </h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>✅ Titre optimisé SEO (60-70 caractères)</li>
-            <li>✅ Meta-description persuasive (150-160 caractères)</li>
-            <li>
-              ✅ Structure claire avec introduction, sections et conclusion
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-6 p-6 bg-primary-500/10 border border-primary-500/20 rounded-xl"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-5 h-5 text-primary-400" />
+            <h3 className="text-sm font-semibold text-primary-300">
+              Votre article inclura :
+            </h3>
+          </div>
+          <ul className="text-sm text-dark-200 space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>Titre optimisé SEO (60-70 caractères)</span>
             </li>
-            <li>✅ Tags et mots-clés SEO</li>
-            <li>✅ Score de qualité SEO (/100)</li>
-            <li>✅ Analyse de lisibilité</li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>Meta-description persuasive (150-160 caractères)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>
+                Structure claire avec introduction, sections et conclusion
+              </span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>Tags et mots-clés SEO</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>Score de qualité SEO (/100)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-400 mt-0.5">✓</span>
+              <span>Analyse de lisibilité</span>
+            </li>
           </ul>
-        </div>
+        </motion.div>
       </form>
-    </div>
+    </motion.div>
   );
 };

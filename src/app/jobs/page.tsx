@@ -3,29 +3,29 @@
 import React from "react";
 import { useJobs } from "../../hooks/useJobs";
 import Link from "next/link";
-import type { JobStatus } from '@prisma/client';
+import type { JobStatus } from "@prisma/client";
 
 const JobsPage: React.FC = () => {
   const { jobs, loading, error, refreshJobs } = useJobs();
 
   const translateStatus = (status: JobStatus) => {
     switch (status) {
-      case 'PENDING':
-        return 'En attente';
-      case 'RUNNING':
-        return 'En cours';
-      case 'GENERATING_OUTLINE':
-        return 'Génération du plan';
-      case 'WRITING_CHAPTERS':
-        return 'Écriture des chapitres';
-      case 'FINALIZING':
-        return 'Finalisation';
-      case 'COMPLETED':
-        return 'Terminé';
-      case 'FAILED':
-        return 'Échoué';
-      case 'CANCELLED':
-        return 'Annulé';
+      case "PENDING":
+        return "En attente";
+      case "RUNNING":
+        return "En cours";
+      case "GENERATING_OUTLINE":
+        return "Génération du plan";
+      case "WRITING_CHAPTERS":
+        return "Écriture des chapitres";
+      case "FINALIZING":
+        return "Finalisation";
+      case "COMPLETED":
+        return "Terminé";
+      case "FAILED":
+        return "Échoué";
+      case "CANCELLED":
+        return "Annulé";
       default:
         return status;
     }
@@ -33,20 +33,20 @@ const JobsPage: React.FC = () => {
 
   const getStatusColor = (status: JobStatus) => {
     switch (status) {
-      case 'PENDING':
-        return 'text-yellow-600 bg-yellow-100';
-      case 'RUNNING':
-      case 'GENERATING_OUTLINE':
-      case 'WRITING_CHAPTERS':
-      case 'FINALIZING':
-        return 'text-blue-600 bg-blue-100';
-      case 'COMPLETED':
-        return 'text-green-600 bg-green-100';
-      case 'FAILED':
-      case 'CANCELLED':
-        return 'text-red-600 bg-red-100';
+      case "PENDING":
+        return "text-yellow-600 bg-yellow-100";
+      case "RUNNING":
+      case "GENERATING_OUTLINE":
+      case "WRITING_CHAPTERS":
+      case "FINALIZING":
+        return "text-blue-600 bg-blue-100";
+      case "COMPLETED":
+        return "text-green-600 bg-green-100";
+      case "FAILED":
+      case "CANCELLED":
+        return "text-red-600 bg-red-100";
       default:
-        return 'text-gray-600 bg-gray-100';
+        return "text-gray-600 bg-gray-100";
     }
   };
 
@@ -100,7 +100,7 @@ const JobsPage: React.FC = () => {
             Actualiser
           </button>
           <Link
-            href="/create"
+            href="/books/create"
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
           >
             Nouveau Livre
@@ -113,10 +113,11 @@ const JobsPage: React.FC = () => {
               Aucun job trouvé
             </h2>
             <p className="text-gray-600 mb-6">
-              Vous n'avez pas encore créé de livre. Commencez par créer votre premier livre !
+              Vous n'avez pas encore créé de livre. Commencez par créer votre
+              premier livre !
             </p>
             <Link
-              href="/create"
+              href="/books/create"
               className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Créer mon premier livre
@@ -168,7 +169,7 @@ const JobsPage: React.FC = () => {
                   </div>
                 )}
 
-                {job.status === 'COMPLETED' && (
+                {job.status === "COMPLETED" && (
                   <div className="mt-4 flex space-x-2">
                     <Link
                       href="/books"

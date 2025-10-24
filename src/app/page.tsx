@@ -1,123 +1,546 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  Sparkles,
+  Video,
+  FileText,
+  BookOpen,
+  ArrowRight,
+  Zap,
+  Users,
+  Shield,
+  Check,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+const features = [
+  {
+    icon: Sparkles,
+    title: "Génération d'images",
+    description:
+      "Créez des visuels époustouflants avec l'IA en quelques secondes",
+    color: "from-pink-500 to-rose-500",
+  },
+  {
+    icon: Video,
+    title: "Génération de vidéos",
+    description: "Transformez vos idées en vidéos captivantes automatiquement",
+    color: "from-purple-500 to-indigo-500",
+  },
+  {
+    icon: FileText,
+    title: "Articles de blog",
+    description: "Rédigez des articles professionnels optimisés SEO en un clic",
+    color: "from-blue-500 to-cyan-500",
+  },
+  {
+    icon: BookOpen,
+    title: "Création d'ebooks",
+    description:
+      "Générez des livres numériques complets structurés et cohérents",
+    color: "from-violet-500 to-purple-500",
+  },
+];
+
+const steps = [
+  {
+    number: 1,
+    title: "Choisissez un outil",
+    desc: "Images, vidéos, articles ou ebooks",
+  },
+  {
+    number: 2,
+    title: "Décrivez votre idée",
+    desc: "Exprimez votre vision en quelques mots",
+  },
+  {
+    number: 3,
+    title: "Générez votre contenu",
+    desc: "L'IA crée pour vous en quelques instants",
+  },
+];
+
+const pricingPlans = [
+  {
+    name: "Gratuit",
+    price: "0 €",
+    period: "/ mois",
+    description: "Pour découvrir la plateforme",
+    features: [
+      "10 crédits par mois",
+      "Génération d'images (watermark)",
+      "Articles de blog basiques",
+      "Support communautaire",
+      "Stockage 500 MB",
+    ],
+    cta: "Commencer gratuitement",
+    highlighted: false,
+  },
+  {
+    name: "Pro",
+    price: "29 €",
+    period: "/ mois",
+    description: "Pour les créateurs ambitieux",
+    features: [
+      "500 crédits par mois",
+      "Génération sans watermark",
+      "Vidéos HD jusqu'à 1080p",
+      "Export ebook illimité",
+      "Accès prioritaire aux modèles",
+      "Stockage 50 GB",
+      "Support prioritaire",
+    ],
+    cta: "Essayer Pro",
+    highlighted: true,
+  },
+  {
+    name: "Enterprise",
+    price: "Sur mesure",
+    period: "",
+    description: "Pour les équipes et entreprises",
+    features: [
+      "Crédits illimités",
+      "API complète",
+      "Support dédié 24/7",
+      "SSO & conformité",
+      "SLA garanti",
+      "Formation personnalisée",
+      "Facturation sur devis",
+    ],
+    cta: "Contactez-nous",
+    highlighted: false,
+  },
+];
 
 const HomePage = () => {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Bienvenue sur <span className="text-blue-600">sorami</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Créez des livres complets en quelques minutes grâce à l'intelligence
-            artificielle. Définissez simplement votre sujet et votre objectif,
-            l'IA s'occupe du reste.
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Link
-              href="/create"
-              className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
-            >
-              Créer mon premier livre
-            </Link>
-            <Link
-              href="/jobs"
-              className="px-8 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-lg font-medium"
-            >
-              Voir mes livres
-            </Link>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-dark">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-20 px-6">
+        {/* Background glow effects */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-600/20 rounded-full blur-3xl animate-pulse-slow animation-delay-2000" />
 
-        {/* Features */}
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-            <div className="text-4xl mb-4">🤖</div>
-            <h3 className="text-xl font-semibold mb-2">IA Avancée</h3>
-            <p className="text-gray-600">
-              Notre IA génère un contenu de qualité adapté à vos besoins
-              spécifiques
-            </p>
-          </div>
-          <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-            <div className="text-4xl mb-4">⚡</div>
-            <h3 className="text-xl font-semibold mb-2">Rapide</h3>
-            <p className="text-gray-600">
-              Obtenez votre livre complet en quelques minutes seulement
-            </p>
-          </div>
-          <div className="text-center p-6 bg-white rounded-lg shadow-sm">
-            <div className="text-4xl mb-4">📚</div>
-            <h3 className="text-xl font-semibold mb-2">Personnalisé</h3>
-            <p className="text-gray-600">
-              Chaque livre est unique et adapté à votre sujet et objectif
-            </p>
-          </div>
-        </div>
-
-        {/* How it works */}
-        <div className="bg-white rounded-lg shadow-sm p-8 mb-12">
-          <h2 className="text-3xl font-bold text-center mb-8">
-            Comment ça marche ?
-          </h2>
-          <div className="grid md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                1
-              </div>
-              <h4 className="font-semibold mb-2">Définissez votre projet</h4>
-              <p className="text-sm text-gray-600">
-                Titre, sujet et objectif de votre livre
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                2
-              </div>
-              <h4 className="font-semibold mb-2">L'IA génère le plan</h4>
-              <p className="text-sm text-gray-600">
-                Création automatique de la structure
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                3
-              </div>
-              <h4 className="font-semibold mb-2">Rédaction des chapitres</h4>
-              <p className="text-sm text-gray-600">
-                Contenu détaillé pour chaque section
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                4
-              </div>
-              <h4 className="font-semibold mb-2">Téléchargez votre livre</h4>
-              <p className="text-sm text-gray-600">
-                Format Markdown prêt à utiliser
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* CTA */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Prêt à commencer ?</h2>
-          <p className="text-gray-600 mb-6">
-            Rejoignez des milliers d'auteurs qui utilisent sorami pour créer
-            leurs livres
-          </p>
-          <Link
-            href="/create"
-            className="inline-block px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-lg font-medium"
+        <div className="max-w-7xl mx-auto relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center"
           >
-            Commencer maintenant →
-          </Link>
+            {/* Logo */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="mb-8"
+            >
+              <h1 className="text-7xl md:text-8xl font-display font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-600 bg-clip-text text-transparent mb-4">
+                Sorami
+              </h1>
+            </motion.div>
+
+            {/* Slogan */}
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.8 }}
+              className="text-3xl md:text-5xl font-display font-bold text-white mb-6"
+            >
+              Créez. Imaginez. Innovez avec l'IA.
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.8 }}
+              className="text-xl text-dark-300 mb-12 max-w-3xl mx-auto"
+            >
+              La plateforme tout-en-un pour générer des images, vidéos, articles
+              et ebooks grâce à l'intelligence artificielle de pointe.
+            </motion.p>
+
+            {/* CTA Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 0.8 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            >
+              <Link href="/dashboard">
+                <Button variant="glow" size="lg" className="group">
+                  Commencer gratuitement
+                  <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="#features">
+                <Button variant="outline" size="lg">
+                  Découvrir les fonctionnalités
+                </Button>
+              </Link>
+            </motion.div>
+
+            {/* Animated illustration */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1, duration: 1 }}
+              className="mt-16 relative"
+            >
+              <div className="relative w-full max-w-4xl mx-auto h-96 rounded-3xl bg-gradient-to-br from-primary-900/50 to-accent-900/50 backdrop-blur-xl border border-primary-500/20 shadow-glow-lg overflow-hidden">
+                <div className="absolute inset-0 bg-glow-violet opacity-50" />
+                <div className="relative z-10 h-full flex items-center justify-center">
+                  <motion.div
+                    animate={{
+                      rotate: 360,
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      rotate: {
+                        duration: 20,
+                        repeat: Infinity,
+                        ease: "linear",
+                      },
+                      scale: {
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
+                    }}
+                    className="w-64 h-64"
+                  >
+                    <Sparkles className="w-full h-full text-primary-400 opacity-60" />
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
-    </main>
+      </section>
+
+      {/* Features Section */}
+      <section id="features" className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
+              Tous vos outils créatifs en un seul endroit
+            </h2>
+            <p className="text-xl text-dark-300 max-w-2xl mx-auto">
+              Une suite complète d'outils IA pour donner vie à toutes vos idées
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.6 }}
+                whileHover={{ y: -10, transition: { duration: 0.2 } }}
+              >
+                <div className="h-full p-8 rounded-2xl bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 hover:border-primary-500/50 transition-all duration-300 hover:shadow-glow group">
+                  <div
+                    className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.color} p-3 mb-6 group-hover:scale-110 transition-transform duration-300`}
+                  >
+                    <feature.icon className="w-full h-full text-white" />
+                  </div>
+                  <h3 className="text-2xl font-display font-semibold text-white mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-dark-300">{feature.description}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="py-20 px-6 bg-dark-950/50">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
+              Comment ça marche ?
+            </h2>
+            <p className="text-xl text-dark-300">
+              Trois étapes simples pour libérer votre créativité
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {steps.map((step, index) => (
+              <motion.div
+                key={step.number}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.2, duration: 0.6 }}
+                className="text-center"
+              >
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary-600 to-accent-600 flex items-center justify-center text-white text-3xl font-bold shadow-glow">
+                    {step.number}
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className="hidden md:block absolute top-10 left-1/2 w-full h-0.5 bg-gradient-to-r from-primary-600 to-transparent" />
+                  )}
+                </div>
+                <h3 className="text-2xl font-display font-semibold text-white mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-dark-300">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
+              Des tarifs adaptés à vos besoins
+            </h2>
+            <p className="text-xl text-dark-300 mb-2">
+              Commencez gratuitement — changez quand vous voulez
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {pricingPlans.map((plan, index) => (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.6 }}
+                className={`relative rounded-2xl p-8 ${
+                  plan.highlighted
+                    ? "bg-gradient-to-br from-primary-900/50 to-accent-900/50 border-2 border-primary-500 shadow-glow-lg scale-105"
+                    : "bg-dark-900/50 border border-dark-800/50"
+                } backdrop-blur-sm`}
+              >
+                {plan.highlighted && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-violet px-4 py-1 rounded-full text-white text-sm font-semibold">
+                    Le plus populaire
+                  </div>
+                )}
+
+                <div className="mb-6">
+                  <h3 className="text-2xl font-display font-bold text-white mb-2">
+                    {plan.name}
+                  </h3>
+                  <p className="text-dark-300 mb-4">{plan.description}</p>
+                  <div className="flex items-baseline">
+                    <span className="text-5xl font-bold text-white">
+                      {plan.price}
+                    </span>
+                    <span className="text-dark-400 ml-2">{plan.period}</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start">
+                      <Check className="w-5 h-5 text-primary-500 mr-3 flex-shrink-0 mt-0.5" />
+                      <span className="text-dark-200">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  variant={plan.highlighted ? "glow" : "outline"}
+                  className="w-full"
+                  size="lg"
+                >
+                  {plan.cta}
+                </Button>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Trust badges */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-16 flex flex-wrap justify-center gap-8 items-center text-dark-400"
+          >
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              <span>Paiement sécurisé</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              <span>+2500 créateurs</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="w-5 h-5" />
+              <span>Stockage AWS S3</span>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="py-20 px-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto text-center relative"
+        >
+          <div className="absolute inset-0 bg-gradient-violet opacity-20 blur-3xl rounded-full" />
+          <div className="relative z-10 p-12 rounded-3xl bg-dark-900/50 backdrop-blur-sm border border-primary-500/30">
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
+              Prêt à créer quelque chose d'incroyable ?
+            </h2>
+            <p className="text-xl text-dark-300 mb-8">
+              Rejoignez des milliers de créateurs qui utilisent Sorami pour
+              donner vie à leurs idées
+            </p>
+            <Link href="/dashboard">
+              <Button variant="glow" size="lg" className="group">
+                Essayer maintenant
+                <Sparkles className="ml-2 w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-dark-800/50 py-12 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <h3 className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent mb-4">
+                Sorami
+              </h3>
+              <p className="text-dark-400">
+                Créez du contenu exceptionnel avec l'IA
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Produit</h4>
+              <ul className="space-y-2 text-dark-400">
+                <li>
+                  <Link
+                    href="#features"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Fonctionnalités
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="#pricing"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Tarifs
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/dashboard"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Dashboard
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Entreprise</h4>
+              <ul className="space-y-2 text-dark-400">
+                <li>
+                  <Link
+                    href="/about"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    À propos
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/blog"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/contact"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Légal</h4>
+              <ul className="space-y-2 text-dark-400">
+                <li>
+                  <Link
+                    href="/privacy"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Confidentialité
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/terms"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    CGU
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/legal"
+                    className="hover:text-primary-400 transition-colors"
+                  >
+                    Mentions légales
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-dark-800/50 pt-8 text-center text-dark-400">
+            <p>© 2025 Sorami. Tous droits réservés.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 };
 

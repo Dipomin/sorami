@@ -2,24 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Variables CSS personnalisées */
+/* Variables CSS personnalisées - Thème Sombre */
 @layer base {
   :root {
-    --primary-color: #1f2937;
-    --secondary-color: #3b82f6;
-    --background-color: #f9fafb;
-    --text-color: #111827;
-    --border-color: #e5e7eb;
+    --font-sans: var(--font-inter);
+    --font-display: var(--font-poppins);
+  }
+
+  .dark {
+    --primary-color: #8b5cf6;
+    --secondary-color: #6366f1;
+    --background-color: #0f172a;
+    --text-color: #f8fafc;
+    --border-color: #334155;
   }
 
   /* Configuration de base pour le corps et HTML */
-  html,
-  body {
+  html {
     @apply h-full antialiased;
+    font-family: var(--font-sans);
   }
 
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply h-full bg-dark-950 text-white;
+  }
+
+  /* Scrollbar styling pour le thème sombre */
+  ::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-950;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-700 hover:bg-dark-600 rounded-full;
+  }
+
+  /* Sélection de texte */
+  ::selection {
+    @apply bg-primary-600 text-white;
   }
 }
 

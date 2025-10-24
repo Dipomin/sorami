@@ -2,7 +2,16 @@
 
 import React from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  FileText,
+  TrendingUp,
+  Calendar,
+  PenSquare,
+  Loader2,
+} from "lucide-react";
 import { BlogArticle } from "../types/blog-api";
+import { Button } from "./ui/button";
 
 interface BlogListProps {
   blogs: BlogArticle[];
@@ -15,129 +24,144 @@ export const BlogList: React.FC<BlogListProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col items-center justify-center py-20">
+        <Loader2 className="w-12 h-12 text-primary-500 animate-spin mb-4" />
+        <p className="text-dark-300">Chargement des articles...</p>
       </div>
     );
   }
 
   if (blogs.length === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="text-gray-400 mb-4">
-          <svg
-            className="mx-auto h-12 w-12"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-20"
+      >
+        <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+          <FileText className="w-10 h-10 text-white" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-2xl font-display font-bold text-white mb-3">
           Aucun article pour le moment
         </h3>
-        <p className="text-gray-500 mb-4">
-          Commencez par créer votre premier article de blog optimisé SEO
+        <p className="text-dark-300 mb-6 max-w-md mx-auto">
+          Commencez par créer votre premier article de blog optimisé SEO avec
+          l'IA
         </p>
-        <Link
-          href="/blog/create"
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          Créer un article
+        <Link href="/blog/create">
+          <Button variant="glow" className="gap-2">
+            <PenSquare className="w-5 h-5" />
+            Créer mon premier article
+          </Button>
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {blogs.map((blog) => (
-        <Link
+      {blogs.map((blog, index) => (
+        <motion.div
           key={blog.id}
-          href={`/blog/${blog.id}`}
-          className="block bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.05 }}
         >
-          <div className="flex items-start justify-between mb-3">
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                blog.status === "PUBLISHED"
-                  ? "bg-green-100 text-green-800"
-                  : blog.status === "GENERATING"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : blog.status === "REVIEW"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {blog.status === "PUBLISHED"
-                ? "Publié"
-                : blog.status === "GENERATING"
-                ? "Génération"
-                : blog.status === "REVIEW"
-                ? "Révision"
-                : "Brouillon"}
-            </span>
-            {blog.seoScore && (
-              <div className="flex items-center">
-                <span className="text-sm font-semibold text-gray-700">
-                  SEO: {Math.round(blog.seoScore)}/100
+          <Link href={`/blog/${blog.id}`} className="block group h-full">
+            <div className="h-full bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl p-6 hover:border-primary-500/50 hover:shadow-glow transition-all duration-300">
+              {/* Status and SEO Score */}
+              <div className="flex items-start justify-between mb-4">
+                <span
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                    blog.status === "PUBLISHED"
+                      ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                      : blog.status === "GENERATING"
+                      ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30"
+                      : blog.status === "REVIEW"
+                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                      : "bg-dark-700/50 text-dark-300 border border-dark-600/30"
+                  }`}
+                >
+                  {blog.status === "PUBLISHED"
+                    ? "Publié"
+                    : blog.status === "GENERATING"
+                    ? "Génération"
+                    : blog.status === "REVIEW"
+                    ? "Révision"
+                    : "Brouillon"}
                 </span>
-                {blog.seoScore >= 90 && <span className="ml-1">🏆</span>}
-                {blog.seoScore >= 80 && blog.seoScore < 90 && (
-                  <span className="ml-1">✅</span>
-                )}
-                {blog.seoScore >= 70 && blog.seoScore < 80 && (
-                  <span className="ml-1">👍</span>
+                {blog.seoScore && (
+                  <div className="flex items-center gap-2 bg-dark-800/50 px-3 py-1 rounded-full">
+                    <TrendingUp className="w-4 h-4 text-primary-400" />
+                    <span className="text-sm font-semibold text-white">
+                      {Math.round(blog.seoScore)}
+                    </span>
+                    {blog.seoScore >= 90 && <span>🏆</span>}
+                    {blog.seoScore >= 80 && blog.seoScore < 90 && (
+                      <span>✅</span>
+                    )}
+                    {blog.seoScore >= 70 && blog.seoScore < 80 && (
+                      <span>👍</span>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
 
-          <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2">
-            {blog.title}
-          </h3>
+              {/* Title */}
+              <h3 className="text-xl font-display font-bold text-white mb-3 line-clamp-2 group-hover:text-primary-300 transition-colors">
+                {blog.title}
+              </h3>
 
-          {blog.metaDescription && (
-            <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-              {blog.metaDescription}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-2 mb-3">
-            {blog.tags &&
-              blog.tags.slice(0, 3).map((tag, index) => (
-                <span
-                  key={index}
-                  className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
-                >
-                  #{tag}
-                </span>
-              ))}
-          </div>
-
-          <div className="flex items-center justify-between text-sm text-gray-500 pt-3 border-t">
-            <div className="flex items-center">
-              {blog.wordCount && (
-                <span className="mr-3">
-                  📝 {blog.wordCount.toLocaleString()} mots
-                </span>
+              {/* Description */}
+              {blog.metaDescription && (
+                <p className="text-dark-300 text-sm mb-4 line-clamp-2">
+                  {blog.metaDescription}
+                </p>
               )}
+
+              {/* Tags */}
+              {blog.tags && blog.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {blog.tags.slice(0, 3).map((tag, tagIndex) => (
+                    <span
+                      key={tagIndex}
+                      className="inline-block bg-primary-500/10 text-primary-300 text-xs px-2 py-1 rounded-lg border border-primary-500/20"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                  {blog.tags.length > 3 && (
+                    <span className="inline-block text-dark-400 text-xs px-2 py-1">
+                      +{blog.tags.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="flex items-center justify-between text-sm text-dark-400 pt-4 border-t border-dark-800/50">
+                <div className="flex items-center gap-2">
+                  {blog.wordCount && (
+                    <div className="flex items-center gap-1">
+                      <FileText className="w-4 h-4" />
+                      <span>{blog.wordCount.toLocaleString()} mots</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    {new Date(blog.createdAt).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
             </div>
-            <span>
-              {new Date(blog.createdAt).toLocaleDateString("fr-FR", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-        </Link>
+          </Link>
+        </motion.div>
       ))}
     </div>
   );
