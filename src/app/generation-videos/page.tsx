@@ -16,6 +16,7 @@ import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useVideoGeneration } from "@/hooks/useVideoGeneration";
 
 const durations = [
   { id: "5", label: "5 secondes", icon: "⚡" },
@@ -36,15 +37,14 @@ export default function GenerateVideosPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<{ videoUrl: string } | null>(null);
 
+  const { generateVideo } = useVideoGeneration();
+
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
     setIsGenerating(true);
     // Simuler la génération
-    setTimeout(() => {
-      setResult({ videoUrl: "/placeholder-video.mp4" });
-      setIsGenerating(false);
-    }, 3000);
+    await generateVideo({ prompt });
   };
 
   const handleReset = () => {

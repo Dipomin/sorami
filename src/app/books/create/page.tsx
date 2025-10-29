@@ -24,8 +24,18 @@ import { useBookCreation } from "@/hooks/useBookCreation";
 const CreateBookPage = () => {
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  const { isLoading, error, createBook, clearError, reset, jobId } =
-    useBookCreation();
+  const {
+    isLoading,
+    error,
+    createBook,
+    clearError,
+    reset,
+    jobId,
+    bookId,
+    isCompleted,
+    progress,
+    status,
+  } = useBookCreation();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -38,6 +48,32 @@ const CreateBookPage = () => {
       router.push("/sign-in");
     }
   }, [user, isLoaded, router]);
+
+  // Rediriger vers le livre une fois terminé
+  React.useEffect(() => {
+    if (isCompleted && bookId) {
+      // Notification de succès
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Livre généré avec succès ! 🎉", {
+          body: "Votre livre est prêt à être consulté",
+          icon: "/favicon.ico",
+        });
+      }
+
+      // Attendre 2 secondes pour que l'utilisateur voie le message de succès
+      const timeout = setTimeout(() => {
+        router.push(`/books/${bookId}`);
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [isCompleted, bookId, router]);
+
+  // Demander la permission pour les notifications au chargement
+  React.useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,17 +128,93 @@ const CreateBookPage = () => {
 
         <div className="max-w-4xl mx-auto">
           <AnimatePresence mode="wait">
-            {/* Success State - Job créé */}
-            {jobId && !error && (
+            {/* Success State - Livre terminé */}
+            {isCompleted && bookId && (
               <motion.div
-                key="success"
+                key="completed"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ type: "spring", duration: 0.5 }}
+                className="bg-dark-800/30 backdrop-blur-xl border border-green-500/30 rounded-2xl p-8 text-center relative overflow-hidden"
+              >
+                {/* Animation de succès en arrière-plan */}
+                <motion.div
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 3, opacity: 0 }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="absolute inset-0 bg-green-500/20 rounded-full"
+                />
+
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                  className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6 relative"
+                >
+                  <CheckCircle2 className="w-10 h-10 text-green-400" />
+                </motion.div>
+
+                <motion.h2
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-3xl font-bold text-white mb-4"
+                >
+                  Livre généré avec succès ! 🎉
+                </motion.h2>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-dark-300 mb-6"
+                >
+                  Votre livre est prêt ! Redirection en cours...
+                </motion.p>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex justify-center gap-3"
+                >
+                  <Button
+                    onClick={() => router.push(`/books/${bookId}`)}
+                    className="bg-gradient-violet hover:opacity-90 transition-opacity shadow-glow"
+                  >
+                    <BookIcon className="w-4 h-4 mr-2" />
+                    Voir mon livre
+                  </Button>
+                  <Button onClick={handleReset} variant="outline">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Créer un autre livre
+                  </Button>
+                </motion.div>
+
+                {/* Indicateur de décompte */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  className="mt-6 text-sm text-dark-400"
+                >
+                  Redirection automatique dans 2 secondes...
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Progress State - Job créé mais pas terminé */}
+            {jobId && !isCompleted && !error && (
+              <motion.div
+                key="progress"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-dark-800/30 backdrop-blur-xl border border-green-500/30 rounded-2xl p-8 text-center"
+                className="bg-dark-800/30 backdrop-blur-xl border border-primary-500/30 rounded-2xl p-8 text-center"
               >
-                <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="w-10 h-10 text-green-400" />
+                <div className="w-20 h-20 rounded-full bg-primary-500/10 flex items-center justify-center mx-auto mb-6">
+                  <Loader2 className="w-10 h-10 text-primary-400 animate-spin" />
                 </div>
                 <h2 className="text-3xl font-bold text-white mb-4">
                   Livre en cours de génération !
@@ -110,16 +222,31 @@ const CreateBookPage = () => {
                 <p className="text-dark-300 mb-2">
                   Votre livre est en cours de création par notre IA
                 </p>
-                <p className="text-sm text-dark-500 mb-6">Job ID: {jobId}</p>
+
+                {/* Barre de progression */}
+                <div className="mt-6 mb-8">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-dark-400">Progression</span>
+                    <span className="text-sm font-bold text-primary-400">
+                      {progress}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-dark-900/50 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-full bg-gradient-violet"
+                    />
+                  </div>
+                  {status && (
+                    <p className="text-sm text-dark-400 mt-2">
+                      Status: {status}
+                    </p>
+                  )}
+                </div>
 
                 <div className="flex justify-center gap-3">
-                  <Button
-                    onClick={handleReset}
-                    className="bg-gradient-violet hover:opacity-90 transition-opacity"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Créer un autre livre
-                  </Button>
                   <Link href="/books">
                     <Button variant="outline">
                       <BookIcon className="w-4 h-4 mr-2" />
@@ -138,16 +265,52 @@ const CreateBookPage = () => {
                   </div>
                   <div className="space-y-3 text-left text-sm text-dark-400">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      <div
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          progress > 0
+                            ? "bg-green-500"
+                            : "bg-dark-600 animate-pulse"
+                        )}
+                      />
                       <span>Analyse du sujet et des objectifs</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary-500 animate-pulse" />
+                      <div
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          progress > 30
+                            ? "bg-green-500"
+                            : progress > 0
+                            ? "bg-primary-500 animate-pulse"
+                            : "bg-dark-600"
+                        )}
+                      />
                       <span>Génération du plan du livre</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-accent-500 animate-pulse" />
+                      <div
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          progress > 70
+                            ? "bg-green-500"
+                            : progress > 30
+                            ? "bg-primary-500 animate-pulse"
+                            : "bg-dark-600"
+                        )}
+                      />
                       <span>Rédaction des chapitres</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={cn(
+                          "w-2 h-2 rounded-full",
+                          progress > 90
+                            ? "bg-green-500 animate-pulse"
+                            : "bg-dark-600"
+                        )}
+                      />
+                      <span>Finalisation du livre</span>
                     </div>
                   </div>
                 </div>

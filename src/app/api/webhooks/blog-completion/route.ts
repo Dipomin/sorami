@@ -78,12 +78,45 @@ export async function POST(request: Request) {
     }
 
     // Récupérer le job existant
-    const blogJob = await prisma.blogJob.findFirst({
-      where: { externalJobId: payload.job_id },
+    // Le backend peut envoyer son propre UUID au lieu d'utiliser notre job_id Prisma
+    // On cherche d'abord par ID Prisma, puis par externalJobId si stocké
+    let blogJob = await prisma.blogJob.findUnique({
+      where: { id: payload.job_id },
     });
 
+    // Si pas trouvé par ID Prisma, chercher par externalJobId
     if (!blogJob) {
-      console.error('❌ [Blog Webhook] Job non trouvé:', payload.job_id);
+      blogJob = await prisma.blogJob.findFirst({
+        where: { externalJobId: payload.job_id },
+      });
+    }
+
+    // Si toujours pas trouvé, c'est peut-être le premier webhook
+    // Chercher le job le plus récent en PENDING pour cet utilisateur
+    if (!blogJob) {
+      console.warn('⚠️ [Blog Webhook] Job non trouvé par ID, recherche du job le plus récent...');
+      
+      blogJob = await prisma.blogJob.findFirst({
+        where: {
+          status: { in: ['PENDING', 'GENERATING_OUTLINE', 'WRITING_CHAPTERS', 'FINALIZING'] },
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Si trouvé, stocker l'externalJobId
+      if (blogJob) {
+        console.log(`✅ [Blog Webhook] Job trouvé (${blogJob.id}), stockage de l'externalJobId ${payload.job_id}`);
+        await prisma.blogJob.update({
+          where: { id: blogJob.id },
+          data: { externalJobId: payload.job_id },
+        });
+      }
+    }
+
+    if (!blogJob) {
+      console.error('❌ [Blog Webhook] Aucun job trouvé pour:', payload.job_id);
       return NextResponse.json(
         { error: 'Job not found' },
         { status: 404 }
@@ -172,10 +205,24 @@ export async function POST(request: Request) {
 
     console.log('✅ [Blog Webhook] Création de l\'article...');
 
-    // Utiliser completed_at s'il existe, sinon timestamp du payload
+    // Dates avec valeurs par défaut
+    const now = new Date();
+    const generatedAtDate = articleData.generated_at 
+      ? new Date(articleData.generated_at) 
+      : now;
     const completedAtDate = articleData.completed_at 
       ? new Date(articleData.completed_at) 
-      : new Date(payload.timestamp);
+      : (payload.timestamp ? new Date(payload.timestamp) : now);
+
+    // Valider les dates
+    if (isNaN(generatedAtDate.getTime())) {
+      console.warn('⚠️ [Blog Webhook] Date generatedAt invalide, utilisation de la date actuelle');
+      generatedAtDate.setTime(now.getTime());
+    }
+    if (isNaN(completedAtDate.getTime())) {
+      console.warn('⚠️ [Blog Webhook] Date completedAt invalide, utilisation de la date actuelle');
+      completedAtDate.setTime(now.getTime());
+    }
 
     // Transaction pour créer l'article
     const result = await prisma.$transaction(async (tx) => {
@@ -200,7 +247,7 @@ export async function POST(request: Request) {
           visibility: 'PRIVATE',
           authorId: blogJob.userId,
           organizationId: blogJob.organizationId,
-          generatedAt: new Date(articleData.generated_at),
+          generatedAt: generatedAtDate,
           completedAt: completedAtDate,
         },
       });

@@ -19,7 +19,9 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/book-completion', // Webhook pour la complétion des livres
   '/api/webhooks/blog-completion', // Webhook pour la complétion des articles de blog
   '/api/webhooks/image-completion', // Webhook pour la complétion des images
+  '/api/webhooks/image-ecommerce-completion', // Webhook pour la complétion des images e-commerce
   '/api/webhooks/video-completion', // Webhook pour la complétion des vidéos
+  '/api/webhooks/video-personnalisee-completion', // Webhook pour la complétion des vidéos personnalisées
   '/api/books', // API publique pour la liste des livres
 ]);
 

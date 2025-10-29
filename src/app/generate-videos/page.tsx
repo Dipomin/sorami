@@ -55,7 +55,7 @@ export default function GenerateVideosPage() {
               <p className="text-gray-600 text-lg">
                 Créez des vidéos cinématographiques avec{" "}
                 <span className="font-semibold text-blue-600">
-                  Gemini Veo 2.0
+                  Gemini Veo 3.1
                 </span>
               </p>
               <div className="mt-2 flex items-center text-sm text-gray-500">

@@ -19,8 +19,9 @@ export async function GET(
     const { jobId } = await params;
 
     // Récupérer le job depuis la base de données
-    const blogJob = await prisma.blogJob.findFirst({
-      where: { externalJobId: jobId },
+    // Le jobId est maintenant l'ID Prisma directement
+    const blogJob = await prisma.blogJob.findUnique({
+      where: { id: jobId },
     });
 
     if (!blogJob) {
@@ -69,7 +70,7 @@ export async function GET(
 
     // Fallback: utiliser les données de la base de données
     const statusResponse = {
-      job_id: blogJob.externalJobId || blogJob.id,
+      job_id: blogJob.id, // ✨ Utiliser l'ID Prisma
       status: blogJob.status.toLowerCase(),
       progress: blogJob.progress,
       message: blogJob.message || 'Traitement en cours...',

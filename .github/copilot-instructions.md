@@ -1,142 +1,251 @@
-# sorami Frontend - Instructions pour les Agents IA
+# Sorami Frontend - AI Agent Instructions
 
-## Architecture du Projet
+## Project Overview
 
-Cette application Next.js 15 (App Router) est un **SaaS multi-tenant** de génération de livres IA avec Clerk authentication, Prisma ORM (MySQL), et intégration CrewAI.
+Next.js 15 (App Router) **multi-tenant SaaS** for AI content generation (books, blogs, images, videos) with Clerk auth, Prisma ORM (MySQL), AWS S3 storage, and CrewAI backend integration.
 
-### Stack Technique Principal
+**Core Stack**: Next.js 15 + TypeScript + Tailwind + Prisma + Clerk + AWS S3 + Framer Motion
 
-- **Backend**: Prisma + MySQL avec schema complet multi-tenant
-- **Auth**: Clerk avec middleware protection sur `/create`, `/books`, `/jobs`, `/dashboard`
-- **Stockage**: AWS S3 pour fichiers (`src/lib/s3-storage.ts`)
-- **Job Processing**: CrewAI async avec système de jobs trackés
-- **Types**: Architecture double `src/lib/types.ts` (Prisma) + `src/types/` (API)
+## Critical Architecture Patterns
 
-### Architecture de Données Critique
-
-Le projet utilise **Prisma avec relations complexes** :
-- **Users/Organizations** : Multi-tenancy avec `OrganizationMember`
-- **Books/Chapters** : Relations `Book.chapters[]` avec `order`
-- **BookJobs** : Système async pour génération IA avec status tracking
-- **Subscriptions** : Intégration Paystack pour facturation
-
-**Pattern API**: Toujours utiliser `src/lib/api-server.ts` (côté serveur) vs `src/lib/api-client.ts` (côté client).
-
-## Conventions Critiques
-
-### Authentification et Middleware
+### 1. Database & Multi-Tenancy (Prisma)
 
 ```typescript
-// Pattern requis pour toutes les API protégées
+// Always use the singleton instance
+import { prisma } from '@/lib/prisma'
+
+// Multi-tenant pattern with organization isolation
+const books = await prisma.book.findMany({
+  where: { organizationId: user.currentOrganizationId },
+  include: {
+    chapters: { orderBy: { order: 'asc' } },
+    author: { select: { id: true, name: true } }
+  }
+})
+```
+
+**Critical Relations**:
+- `User` ↔ `OrganizationMember` ↔ `Organization` (multi-tenancy)
+- `Book` ↔ `Chapter[]` (ordered with `order` field)
+- `BookJob/BlogJob/ImageGeneration/VideoGeneration` (async job tracking)
+- `Subscription` + `PaystackSubscription` (billing)
+
+**After schema changes**: `npx prisma generate` → `npx prisma db push` (dev) or `npx prisma migrate dev` (prod)
+
+### 2. Authentication (Clerk + Custom Helpers)
+
+```typescript
+// Server-side API routes (REQUIRED pattern)
 import { requireAuth } from '@/lib/auth';
-const user = await requireAuth(); // Throws si non connecté
-```
 
-- **Middleware**: Routes protégées définies dans `middleware.ts` avec `createRouteMatcher`
-- **Auth Helper**: `getCurrentUser()` retourne user Prisma avec `organizationMemberships`
-
-### Gestion des Jobs Async
-
-```typescript
-// Pattern pour jobs CrewAI
-const job = await prisma.bookJob.create({
-  data: { bookId, jobType: 'GENERATE_OUTLINE', status: 'PENDING' }
-});
-// Polling via /api/jobs/[id]/status
-```
-
-**Workflow**: `PENDING` → `RUNNING` → `COMPLETED`/`FAILED`
-
-### Types et API Patterns
-
-- **Server-side**: Utiliser types Prisma étendus (`BookWithChapters`, `BookJobWithDetails`)
-- **Client-side**: Types simplifiés dans `src/types/book-api.ts`
-- **API Routes**: Pattern `NextResponse.json()` avec gestion d'erreur cohérente
-
-### Hooks Patterns Établis
-
-```typescript
-// Pattern standard hooks
-const { books, loading, error } = useBooks();
-const { createBook, isCreating } = useBookCreation();
-const { jobs, pollJobStatus } = useJobs();
-```
-
-## Workflows de Développement
-
-### Database et Migrations
-
-```bash
-npx prisma generate      # Après modification schema.prisma
-npx prisma db push       # Pour dev (pas de migration fichier)
-npx prisma migrate dev   # Pour migration versionnée
-npx prisma studio        # Interface admin BD
-```
-
-### Development Setup
-
-```bash
-npm run dev              # Port 3000 avec hot reload
-npm run lint             # ESLint requis avant commit
-npm run build            # Test production build
-```
-
-## Intégrations Externes
-
-### Clerk Configuration
-
-- **Webhooks**: `/api/webhooks/clerk` synchronise users avec Prisma
-- **Middleware**: Protection granulaire par route patterns
-- **Images**: Domains configurés dans `next.config.js` pour avatars
-
-### CrewAI Integration
-
-- **Jobs API**: `/api/jobs` pour création et monitoring
-- **Async Pattern**: Stateful jobs avec polling client-side
-- **Input Validation**: `BookRequest` type stricte avec `book-utils.ts`
-- **Webhooks**: `/api/webhooks/book-completion` reçoit les livres terminés du backend
-
-### Webhooks System (Book Completion)
-
-```typescript
-// Pattern webhook conforme à la documentation CrewAI
-interface WebhookPayload {
-  job_id: string;
-  status: 'completed' | 'failed';
-  timestamp: string;
-  environment: 'development' | 'production';
-  book_data?: BookData; // Requis si status = 'completed'
+export async function POST(request: NextRequest) {
+  const user = await requireAuth(); // Throws if unauthenticated
+  // user includes organizationMemberships with full data
 }
 ```
 
-**Fonctionnalités Critiques** :
-- **Idempotence** : Map en mémoire pour éviter le double traitement (fenêtre 5 min)
-- **Transaction Prisma** : Création atomique Book + Chapters
-- **Sécurité** : Validation du secret en production via header `X-Webhook-Secret`
-- **Logs structurés** : Emojis + métadonnées pour monitoring
-- **Performance** : Réponse < 30 secondes (recommandation CrewAI)
+**Middleware Protection** (`middleware.ts`):
+- Protected: `/create`, `/books`, `/blog`, `/jobs`, `/dashboard`, `/generate-*`
+- Public: `/`, `/sign-in`, `/sign-up`, `/api/webhooks/*`
+- Clerk webhook at `/api/webhooks/clerk` syncs users to Prisma DB
 
-**Variables d'environnement** :
-- `WEBHOOK_SECRET` : Secret partagé avec le backend CrewAI (production uniquement)
-- `NEXT_PUBLIC_WEBHOOK_URL` : URL publique du webhook pour le backend
+### 3. Dual API Architecture
 
-### S3 Storage
+**Server-Side** (`src/lib/api-server.ts`):
+```typescript
+import { fetchBooks, createBook } from '@/lib/api-server'
+// Use in Server Components, API Routes, Server Actions
+// Returns Prisma types: BookWithChapters, BookJobWithDetails
+```
 
-- **Multi-format**: PDF, EPUB, DOCX exports supportés
-- **Presigned URLs**: Pattern sécurisé via `s3-simple.ts`
+**Client-Side** (`src/lib/api-client.ts` or fetch):
+```typescript
+// Use in Client Components via hooks
+// Returns simplified types from src/types/*.ts
+const { books } = useBooks(); // hooks/useBooks.ts
+```
 
-## Patterns UI Établis
+**Type Strategy**:
+- `src/lib/types.ts`: Prisma extended types (server-only)
+- `src/types/book-api.ts`, `blog-api.ts`, etc.: Simplified API contracts (client)
 
-### Component Structure
+### 4. Webhook System (CrewAI Backend Integration)
 
-- **Form Components**: `BookCreationForm` avec validation intégrée
-- **UI Kit**: `src/components/ui/` réutilisables (button, card, input, progress)
-- **Status Indicators**: `StatusBadge` pour job states, `BookProgressIndicator`
+**Critical Pattern** - All completion webhooks follow this structure:
 
-### Styling Standards
+```typescript
+// /api/webhooks/{book|blog|image|video}-completion/route.ts
+export async function POST(request: NextRequest) {
+  // 1. Security: Validate X-Webhook-Secret in production
+  const webhookSecret = (await headers()).get('x-webhook-secret');
+  if (process.env.NODE_ENV !== 'development' && webhookSecret !== process.env.WEBHOOK_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  // 2. Idempotency: Prevent duplicate processing (5min window)
+  const idempotencyKey = `${payload.job_id}-${payload.status}`;
+  if (processedWebhooks.has(idempotencyKey)) {
+    return NextResponse.json({ message: 'Already processed' });
+  }
+  processedWebhooks.set(idempotencyKey, Date.now());
+  
+  // 3. Atomic DB transaction
+  await prisma.$transaction(async (tx) => {
+    const job = await tx.bookJob.update({...});
+    const book = await tx.book.create({
+      data: {
+        ...sanitizedData,
+        chapters: { create: chaptersData.map((ch, i) => ({ ...ch, order: i + 1 })) }
+      }
+    });
+  });
+}
+```
 
-- **Tailwind Only**: Pas de CSS modules ou styled-components
-- **Color Scheme**: Primary gray-900, cards avec shadow-md
-- **Responsive**: Mobile-first avec breakpoints Tailwind
+**Env Vars**: `WEBHOOK_SECRET`, `NEXT_PUBLIC_API_URL` (CrewAI backend), `NEXT_PUBLIC_WEBHOOK_URL`
 
-Toujours commencer par vérifier les types Prisma existants et les patterns API établis avant d'implémenter de nouvelles fonctionnalités.
+### 5. S3 Storage Pattern
+
+```typescript
+import { uploadBookFile, getDownloadUrl } from '@/lib/s3-storage'
+
+// Upload with metadata
+const fileInfo = await uploadBookFile({
+  bookId: 'book_123',
+  content: pdfBuffer,
+  format: 'PDF',
+  metadata: { author: user.name }
+});
+// Returns: { id, path, size, downloadUrl }
+```
+
+**S3 Organization**: `books/{bookId}/{timestamp}.{format}`, `images/`, `videos/`
+
+### 6. React Hooks Conventions
+
+```typescript
+// Standard naming: use{Feature}{Action}
+export function useBookCreation() {
+  const [isCreating, setIsCreating] = useState(false);
+  const createBook = async (data: BookRequest) => {
+    // Always handle loading + error states
+  };
+  return { createBook, isCreating, error };
+}
+
+// Usage in components
+const { createBook, isCreating } = useBookCreation();
+```
+
+**Established Hooks**: `useBooks`, `useBookCreation`, `useBlogJob`, `useImageGeneration`, `useVideoGeneration`, `useSecureAPI`, `useSubscription`, `useS3Files`
+
+## Development Workflows
+
+### Local Development
+```bash
+npm run dev              # Next.js on :3000
+npx prisma studio        # DB GUI on :5555
+npm run lint             # ESLint check (run before commits)
+```
+
+### Database Operations
+```bash
+# After editing schema.prisma
+npx prisma generate      # Regenerate Prisma Client types
+npx prisma db push       # Sync schema to DB (dev - no migration file)
+npx prisma migrate dev   # Create versioned migration (staging/prod)
+```
+
+### Testing Webhooks Locally
+```bash
+# Use test scripts in root
+./test-blog-webhook.sh
+./test-image-webhook.sh
+./test-video-generation.sh
+```
+
+## UI/Styling Conventions
+
+**Tailwind-Only** (no CSS modules):
+- Dark theme with glassmorphism: `bg-slate-900/50 backdrop-blur-sm`
+- Primary colors: Violet (`violet-600`), Indigo (`indigo-600`)
+- Framer Motion for animations: `motion.div` with `variants` pattern
+- Component library: `src/components/ui/` (shadcn-style)
+
+**Responsive Pattern**:
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {/* Mobile-first breakpoints */}
+</div>
+```
+
+## Critical Environment Variables
+
+```bash
+# Database
+DATABASE_URL="mysql://user:pass@host:3306/sorami"
+
+# Auth (Clerk)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
+
+# Storage (AWS S3)
+AWS_ACCESS_KEY_ID="..."
+AWS_SECRET_ACCESS_KEY="..."
+AWS_REGION="us-east-1"
+AWS_S3_BUCKET_NAME="sorami-storage"
+
+# Backend Integration
+NEXT_PUBLIC_API_URL="http://localhost:9006"  # CrewAI backend
+WEBHOOK_SECRET="sorami-webhook-secret-key-2025"
+
+# Billing (Paystack)
+PAYSTACK_SECRET_KEY="sk_test_..."
+PAYSTACK_PUBLIC_KEY="pk_test_..."
+```
+
+## Common Gotchas
+
+1. **Clerk User Sync**: New users auto-created via `getCurrentUser()` helper, not just webhook
+2. **Chapter Ordering**: Always use `order` field and `orderBy: { order: 'asc' }`
+3. **Webhook Idempotency**: In-memory Map with 5min TTL (use Redis for multi-instance)
+4. **S3 Upload Errors**: Check bucket name matches `AWS_S3_BUCKET_NAME` and region
+5. **Type Imports**: Never import Prisma types in client components - use `src/types/*`
+6. **Middleware Bypass**: Add webhook routes to `isPublicRoute` matcher
+
+## File Structure Reference
+
+```
+src/
+├── app/                    # Next.js App Router
+│   ├── api/                # API routes
+│   │   └── webhooks/       # CrewAI completion webhooks
+│   ├── (auth)/             # Auth pages (Clerk)
+│   ├── books/              # Book management
+│   ├── blog/               # Blog generation
+│   ├── generate-images/    # Image generation
+│   └── generate-videos/    # Video generation
+├── lib/
+│   ├── auth.ts             # requireAuth, getCurrentUser
+│   ├── prisma.ts           # Singleton Prisma client
+│   ├── api-server.ts       # Server-side API (Prisma types)
+│   ├── api-client.ts       # Client-side API (fetch)
+│   ├── s3-storage.ts       # S3 upload/download
+│   └── types.ts            # Prisma extended types
+├── types/                  # API contract types (client)
+├── hooks/                  # React hooks (use* pattern)
+├── components/
+│   └── ui/                 # Reusable UI components
+└── middleware.ts           # Clerk route protection
+```
+
+## When Adding New Features
+
+1. **Database**: Update `schema.prisma` → `prisma generate` → `prisma db push`
+2. **Types**: Add to `src/lib/types.ts` (Prisma) AND `src/types/*.ts` (API)
+3. **API Route**: Use `requireAuth()`, proper error handling, `NextResponse.json()`
+4. **Hook**: Follow `use{Feature}` pattern with loading/error states
+5. **Webhook**: Implement idempotency + secret validation + atomic transactions
+6. **UI**: Tailwind classes only, Framer Motion for animations
+
+**Always check existing patterns in similar features before implementing new ones.**

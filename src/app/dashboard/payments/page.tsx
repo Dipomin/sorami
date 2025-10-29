@@ -25,12 +25,14 @@ interface Transaction {
   currency: string;
   status: "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED";
   createdAt: string;
-  providerData: any;
+  updatedAt: string;
+  providerData?: any;
 }
 
 export default function PaymentsHistoryPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -40,13 +42,29 @@ export default function PaymentsHistoryPage() {
   const fetchTransactions = async () => {
     try {
       setLoading(true);
+      setError(null);
+
       const res = await fetch("/api/payments/history");
+
+      if (!res.ok) {
+        throw new Error(`Erreur HTTP: ${res.status}`);
+      }
+
       const data = await res.json();
+
+      console.log("📊 [Payments] Réponse API:", data);
+
       if (data.success) {
-        setTransactions(data.transactions || []);
+        // L'API retourne { success: true, data: { transactions: [...] } }
+        const txList = data.data?.transactions || [];
+        console.log("✅ [Payments] Transactions chargées:", txList.length);
+        setTransactions(txList);
+      } else {
+        throw new Error(data.error || "Erreur inconnue");
       }
     } catch (error) {
-      console.error("Error fetching transactions:", error);
+      console.error("❌ [Payments] Erreur:", error);
+      setError(error instanceof Error ? error.message : "Erreur de chargement");
     } finally {
       setLoading(false);
     }
@@ -100,6 +118,11 @@ export default function PaymentsHistoryPage() {
     );
   };
 
+  const downloadInvoice = (transactionId: string, reference: string) => {
+    // Ouvrir la facture dans un nouvel onglet
+    window.open(`/api/payments/invoice/${transactionId}`, "_blank");
+  };
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -130,6 +153,30 @@ export default function PaymentsHistoryPage() {
             </div>
           </div>
         </motion.div>
+
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4"
+          >
+            <div className="flex items-center gap-3">
+              <XCircle className="w-5 h-5 text-red-400" />
+              <div>
+                <p className="text-red-400 font-medium">Erreur de chargement</p>
+                <p className="text-sm text-red-300/70">{error}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={fetchTransactions}
+            >
+              Réessayer
+            </Button>
+          </motion.div>
+        )}
 
         {transactions.length === 0 ? (
           <motion.div
@@ -188,10 +235,8 @@ export default function PaymentsHistoryPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        // Download invoice functionality
-                        alert("Téléchargement de la facture (à implémenter)");
-                      }}
+                      onClick={() => downloadInvoice(tx.id, tx.reference)}
+                      title="Télécharger ou imprimer la facture"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Facture

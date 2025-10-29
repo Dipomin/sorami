@@ -54,6 +54,7 @@ async function main() {
       slug: 'demo-org',
       description: 'Organisation de démonstration pour tester les fonctionnalités',
       plan: 'PRO',
+      format: 'landscape', // Requis par le schéma
       maxUsers: 10,
       maxBooks: 100,
       maxBooksPerMonth: 20,

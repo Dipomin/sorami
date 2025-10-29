@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { deductCredits } from '@/lib/credits';
 import type { ImageGenerationRequest } from '@/types/image-api';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9006';
@@ -23,6 +24,37 @@ export async function POST(request: Request) {
 
     // 2️⃣ Parser la requête
     const data: ImageGenerationRequest = await request.json();
+    
+    // 🪙 Déduction des crédits AVANT la génération
+    const numImages = data.num_images || 1;
+    const creditResult = await deductCredits({
+      userId: user.id,
+      contentType: 'IMAGE',
+      quantity: numImages,
+      metadata: {
+        prompt: data.prompt?.substring(0, 100),
+        size: data.size,
+        style: data.style,
+      },
+    });
+
+    if (!creditResult.success) {
+      console.error('❌ [Image Generate API] Crédits insuffisants:', creditResult.error);
+      return NextResponse.json(
+        {
+          error: 'Insufficient credits',
+          message: creditResult.error,
+          creditsAvailable: creditResult.creditsRemaining,
+          creditsRequired: numImages,
+        },
+        { status: 402 } // Payment Required
+      );
+    }
+
+    console.log('✅ [Image Generate API] Crédits déduits:', {
+      deducted: creditResult.creditsDeducted,
+      remaining: creditResult.creditsRemaining,
+    });
     console.log('📦 [Image Generate API] Données reçues:', {
       prompt: data.prompt?.substring(0, 50),
       size: data.size,

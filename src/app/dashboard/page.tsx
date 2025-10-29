@@ -14,6 +14,8 @@ import {
   ArrowRight,
   Loader2,
   BarChart3,
+  Film,
+  ShoppingBag,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -29,12 +31,28 @@ const quickActions = [
     gradient: "bg-gradient-to-br from-pink-500/20 to-rose-500/20",
   },
   {
+    title: "Images E-commerce",
+    description: "Photos produits professionnelles",
+    icon: ShoppingBag,
+    href: "/dashboard/ecommerce-images",
+    color: "from-rose-500 to-pink-500",
+    gradient: "bg-gradient-to-br from-rose-500/20 to-pink-500/20",
+  },
+  {
     title: "Créer une vidéo",
     description: "Produisez des vidéos captivantes",
     icon: Video,
     href: "/generation-videos",
     color: "from-purple-500 to-indigo-500",
     gradient: "bg-gradient-to-br from-purple-500/20 to-indigo-500/20",
+  },
+  {
+    title: "Vidéos personnalisées",
+    description: "Vidéos avec vos images de référence",
+    icon: Film,
+    href: "/dashboard/custom-videos",
+    color: "from-indigo-500 to-blue-500",
+    gradient: "bg-gradient-to-br from-indigo-500/20 to-blue-500/20",
   },
   {
     title: "Rédiger un article",
@@ -69,9 +87,18 @@ interface Activity {
   id: string;
 }
 
+interface Credits {
+  used: number;
+  remaining: number;
+  max: number;
+  percentage: number;
+  plan: string;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [credits, setCredits] = useState<Credits | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,13 +106,17 @@ export default function DashboardPage() {
     Promise.all([
       fetch("/api/dashboard/stats").then((res) => res.json()),
       fetch("/api/dashboard/activity").then((res) => res.json()),
+      fetch("/api/dashboard/credits").then((res) => res.json()),
     ])
-      .then(([statsData, activityData]) => {
+      .then(([statsData, activityData, creditsData]) => {
         if (statsData.success) {
           setStats(statsData.stats);
         }
         if (activityData.success) {
           setActivities(activityData.activities);
+        }
+        if (creditsData.success) {
+          setCredits(creditsData.credits);
         }
       })
       .catch((error) => {
@@ -385,21 +416,40 @@ export default function DashboardPage() {
               </div>
 
               <div className="bg-gradient-to-br from-primary-900/30 to-accent-900/30 backdrop-blur-sm border border-primary-500/30 rounded-2xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  ⚡ Crédits restants
-                </h3>
-                <p className="text-3xl font-bold text-white mb-2">47 / 500</p>
-                <div className="w-full h-2 bg-dark-800/50 rounded-full mb-4 overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-violet rounded-full"
-                    style={{ width: "9.4%" }}
-                  />
-                </div>
-                <Link href="/pricing">
-                  <Button variant="outline" size="sm" className="w-full">
-                    Recharger
-                  </Button>
-                </Link>
+                {loading || !credits ? (
+                  // Skeleton loader
+                  <div className="animate-pulse">
+                    <div className="h-5 bg-dark-800/50 rounded w-32 mb-3" />
+                    <div className="h-9 bg-dark-800/50 rounded w-24 mb-3" />
+                    <div className="h-2 bg-dark-800/50 rounded-full mb-4" />
+                    <div className="h-9 bg-dark-800/50 rounded" />
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="text-lg font-semibold text-white mb-2">
+                      ⚡ Crédits restants
+                    </h3>
+                    <p className="text-3xl font-bold text-white mb-2">
+                      {credits.remaining} / {credits.max}
+                    </p>
+                    <div className="w-full h-2 bg-dark-800/50 rounded-full mb-4 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-violet rounded-full transition-all duration-500"
+                        style={{ width: `${credits.percentage}%` }}
+                      />
+                    </div>
+                    <Link href="/pricing">
+                      <Button variant="outline" size="sm" className="w-full">
+                        {credits.percentage < 20
+                          ? "Recharger maintenant"
+                          : "Améliorer le plan"}
+                      </Button>
+                    </Link>
+                    <p className="text-dark-400 text-xs mt-3 text-center">
+                      Plan: {credits.plan} • Utilisés: {credits.used}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           </div>

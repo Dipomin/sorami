@@ -22,6 +22,7 @@ export async function GET(
         result: true,
         error: true,
         userId: true,
+        bookId: true, // ✅ Ajout du bookId
       },
     });
     
@@ -40,7 +41,8 @@ export async function GET(
         status: job.status,
         progress: job.progress,
         result: job.result,
-        error: job.error || undefined
+        error: job.error || undefined,
+        bookId: job.bookId || undefined, // ✅ Retourner le bookId
       });
     }
     
@@ -80,6 +82,7 @@ export async function GET(
           progress: backendData.progress || job.progress,
           result: backendData.result || job.result,
           error: backendData.error || undefined,
+          bookId: job.bookId || undefined, // ✅ Retourner le bookId
         });
       }
     } catch (backendError) {
@@ -91,7 +94,8 @@ export async function GET(
       status: job.status,
       progress: job.progress,
       result: job.result,
-      error: job.error || undefined
+      error: job.error || undefined,
+      bookId: job.bookId || undefined, // ✅ Retourner le bookId
     });
     
   } catch (error) {

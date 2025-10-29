@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { deductCredits } from '@/lib/credits';
 import { auth } from '@clerk/nextjs/server';
 
 const CREWAI_API_URL = process.env.CREWAI_API_URL || 'http://localhost:9006';
@@ -39,6 +40,36 @@ export async function POST(request: Request) {
       );
     }
 
+    // 🪙 Déduction des crédits AVANT la génération
+    const creditResult = await deductCredits({
+      userId: user.id,
+      contentType: 'BLOG',
+      quantity: 1,
+      metadata: {
+        topic: topic?.substring(0, 100),
+        goal: goal?.substring(0, 100),
+        target_word_count,
+      },
+    });
+
+    if (!creditResult.success) {
+      console.error('❌ [Blog Generate API] Crédits insuffisants:', creditResult.error);
+      return NextResponse.json(
+        {
+          error: 'Insufficient credits',
+          message: creditResult.error,
+          creditsAvailable: creditResult.creditsRemaining,
+          creditsRequired: 2, // 2 crédits par article
+        },
+        { status: 402 } // Payment Required
+      );
+    }
+
+    console.log('✅ [Blog Generate API] Crédits déduits:', {
+      deducted: creditResult.creditsDeducted,
+      remaining: creditResult.creditsRemaining,
+    });
+
     // Créer d'abord un BlogJob dans la base de données
     const blogJob = await prisma.blogJob.create({
       data: {
@@ -64,6 +95,8 @@ export async function POST(request: Request) {
           'Authorization': `Bearer ${token}`, // ✅ Token Clerk inclus
         },
         body: JSON.stringify({
+          job_id: blogJob.id, // ✨ Ajouter le job_id Prisma
+          user_id: user.id,   // ✨ Ajouter le user_id
           topic,
           goal: goal || undefined,
           target_word_count,
@@ -74,20 +107,14 @@ export async function POST(request: Request) {
       if (response.ok) {
         const data = await response.json();
 
-        // Mettre à jour le job avec l'ID externe
-        await prisma.blogJob.update({
-          where: { id: blogJob.id },
-          data: {
-            externalJobId: data.job_id,
-          },
-        });
+        // Le backend retourne le même job_id que nous lui avons envoyé
+        console.log('✅ [Blog Generate API] Réponse du backend:', data);
 
         return NextResponse.json({
-          job_id: data.job_id,
-          status: data.status,
-          message: data.message,
-          created_at: data.created_at,
-          internal_job_id: blogJob.id,
+          job_id: blogJob.id, // ✨ Utiliser l'ID Prisma
+          status: data.status || 'PENDING',
+          message: data.message || 'Génération d\'article démarrée',
+          created_at: blogJob.createdAt.toISOString(),
         });
       } else {
         const errorData = await response.json().catch(() => ({}));

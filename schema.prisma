@@ -37,6 +37,11 @@ model User {
   role            UserRole   @default(USER)
   isEmailVerified Boolean    @default(false)
 
+  // Système de crédits pour SaaS
+  credits         Int      @default(0)
+  totalCreditsUsed Int     @default(0)
+  creditsUpdatedAt DateTime?
+
   // Métadonnées
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -58,6 +63,7 @@ model User {
   notifications           Notification[]
   transactions            Transaction[]
   paystackSubscriptions   PaystackSubscription[]
+  creditTransactions      CreditTransaction[]
 
   @@map("users")
 }
@@ -1279,6 +1285,7 @@ model PaystackPlan {
   interval    String   // "monthly", "yearly", etc.
   currency    String   @default("XOF")
   description String?  @db.Text
+  credits     Int      @default(0) // Nombre de crédits attribués par ce plan
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -1322,4 +1329,36 @@ model PaystackSubscription {
   @@index([userId])
   @@index([status])
   @@map("paystack_subscriptions")
+}
+
+// Historique des transactions de crédits
+model CreditTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  amount        Int      // Peut être positif (ajout) ou négatif (déduction)
+  type          CreditTransactionType
+  description   String?  @db.Text
+  
+  // Références optionnelles
+  planId        String?
+  transactionRef String? // Référence Paystack
+  
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("credit_transactions")
+}
+
+enum CreditTransactionType {
+  PURCHASE        // Achat de crédits
+  SUBSCRIPTION    // Crédits d'abonnement
+  BONUS           // Bonus/promotion
+  REFUND          // Remboursement
+  USAGE           // Utilisation (déduction)
+  ADMIN_ADJUSTMENT // Ajustement admin
 }

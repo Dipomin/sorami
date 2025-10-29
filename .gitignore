@@ -27,3 +27,6 @@ coverage/
 .env.test.local
 .env.production.local
 .next
+/docs
+/docs-webhooks
+/script_test

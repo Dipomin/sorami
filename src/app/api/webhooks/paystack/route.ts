@@ -34,10 +34,13 @@ export async function POST(request: NextRequest) {
     switch (event.event) {
       case 'subscription.create':
         await handleSubscriptionCreated(event.data)
+        await handlePaystackSubscriptionCreated(event.data)
         break
         
       case 'subscription.not_renew':
+      case 'subscription.disable':
         await handleSubscriptionCanceled(event.data)
+        await handlePaystackSubscriptionDisabled(event.data)
         break
         
       case 'invoice.create':
@@ -50,6 +53,7 @@ export async function POST(request: NextRequest) {
         
       case 'charge.success':
         await handleChargeSuccess(event.data)
+        await handlePaystackChargeSuccess(event.data)
         break
         
       default:
@@ -191,5 +195,257 @@ async function handleChargeSuccess(data: any) {
     console.log('Paiement réussi:', data.reference)
   } catch (error) {
     console.error('Erreur traitement paiement:', error)
+  }
+}
+
+// Nouveaux gestionnaires pour PaystackSubscription
+async function handlePaystackSubscriptionCreated(data: any) {
+  try {
+    const subscriptionCode = data.subscription_code;
+    const customerEmail = data.customer?.email;
+
+    console.log(`✅ PaystackSubscription créé: ${subscriptionCode} pour ${customerEmail}`);
+
+    // Mettre à jour le statut dans la DB
+    await prisma.paystackSubscription.updateMany({
+      where: { paystackId: subscriptionCode },
+      data: {
+        status: 'ACTIVE',
+        currentPeriodEnd: data.next_payment_date ? new Date(data.next_payment_date) : null,
+        providerData: data,
+        updatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error('Erreur handlePaystackSubscriptionCreated:', error)
+  }
+}
+
+async function handlePaystackSubscriptionDisabled(data: any) {
+  try {
+    const subscriptionCode = data.subscription_code;
+
+    console.log(`❌ PaystackSubscription désactivé: ${subscriptionCode}`);
+
+    // Mettre à jour le statut dans la DB
+    await prisma.paystackSubscription.updateMany({
+      where: { paystackId: subscriptionCode },
+      data: {
+        status: 'CANCELLED',
+        cancelAtPeriodEnd: true,
+        updatedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.error('Erreur handlePaystackSubscriptionDisabled:', error)
+  }
+}
+
+async function handlePaystackChargeSuccess(data: any) {
+  try {
+    const reference = data.reference;
+    const amount = data.amount / 100; // Convertir de kobo/centimes en XOF
+    const customerEmail = data.customer?.email;
+
+    console.log(`💰 Paiement PaystackSubscription réussi: ${reference} - ${amount} ${data.currency} pour ${customerEmail}`);
+
+    // Rechercher l'utilisateur par email
+    const user = await prisma.user.findUnique({
+      where: { email: customerEmail },
+      select: { id: true, credits: true },
+    });
+
+    if (!user) {
+      console.warn(`⚠️ Utilisateur non trouvé pour l'email: ${customerEmail}`);
+      return;
+    }
+
+    // Créer ou mettre à jour la transaction
+    await prisma.transaction.upsert({
+      where: { reference },
+      update: {
+        status: 'SUCCESS',
+        providerData: data,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId: user.id,
+        reference,
+        amount,
+        currency: data.currency || 'XOF',
+        status: 'SUCCESS',
+        providerData: data,
+      },
+    });
+
+    // Si c'est un paiement avec un plan (premier paiement d'abonnement)
+    if (data.plan && data.plan.plan_code) {
+      console.log(`📝 Création d'abonnement pour le plan: ${data.plan.plan_code}`);
+
+      // Récupérer le plan depuis la DB
+      const plan = await prisma.paystackPlan.findFirst({
+        where: { paystackId: data.plan.plan_code },
+      });
+
+      if (!plan) {
+        console.error(`❌ Plan non trouvé: ${data.plan.plan_code}`);
+        return;
+      }
+
+      // Vérifier s'il n'existe pas déjà un abonnement actif
+      const existingSubscription = await prisma.paystackSubscription.findFirst({
+        where: {
+          userId: user.id,
+          status: 'ACTIVE',
+        },
+      });
+
+      let subscription;
+      if (!existingSubscription) {
+        // Créer l'abonnement
+        subscription = await prisma.paystackSubscription.create({
+          data: {
+            userId: user.id,
+            paystackId: data.metadata?.subscription_code || `sub_${reference}`,
+            planId: plan.id,
+            status: 'ACTIVE',
+            currentPeriodEnd: data.paid_at 
+              ? new Date(new Date(data.paid_at).getTime() + 30 * 24 * 60 * 60 * 1000) 
+              : null,
+            providerData: {
+              customer_code: data.customer?.customer_code,
+              plan_code: data.plan.plan_code,
+              authorization: data.authorization,
+              first_payment_reference: reference,
+            },
+          },
+        });
+
+        console.log(`✅ Abonnement créé avec succès pour ${customerEmail}`);
+      } else {
+        subscription = existingSubscription;
+        console.log(`ℹ️ Abonnement déjà actif pour ${customerEmail}`);
+      }
+
+      // 🎯 POINT CRITIQUE : ATTRIBUTION DES CRÉDITS
+      if (plan.credits > 0) {
+        await prisma.$transaction(async (tx) => {
+          // Ajouter les crédits à l'utilisateur
+          await tx.user.update({
+            where: { id: user.id },
+            data: {
+              credits: { increment: plan.credits },
+              creditsUpdatedAt: new Date(),
+            },
+          });
+
+          // Créer une transaction de crédits pour l'historique
+          await tx.creditTransaction.create({
+            data: {
+              userId: user.id,
+              amount: plan.credits,
+              type: 'SUBSCRIPTION',
+              description: `Crédits d'abonnement ${plan.name} - ${plan.interval}`,
+              planId: plan.id,
+              transactionRef: reference,
+              metadata: {
+                planName: plan.name,
+                planAmount: plan.amount,
+                planCurrency: plan.currency,
+                paystackReference: reference,
+              },
+            },
+          });
+
+          console.log(`💳 ${plan.credits} crédits ajoutés à ${customerEmail} (Plan: ${plan.name})`);
+        });
+
+        // Créer une notification
+        await prisma.notification.create({
+          data: {
+            userId: user.id,
+            type: 'SUCCESS',
+            title: 'Crédits ajoutés !',
+            message: `${plan.credits} crédits ont été ajoutés à votre compte suite à votre abonnement ${plan.name}.`,
+            metadata: {
+              credits: plan.credits,
+              planName: plan.name,
+              reference,
+            },
+          },
+        });
+      }
+    }
+
+    // Si c'est un renouvellement d'abonnement existant
+    if (data.metadata?.subscription_code) {
+      const subscription = await prisma.paystackSubscription.findUnique({
+        where: { paystackId: data.metadata.subscription_code },
+        include: { plan: true },
+      });
+
+      if (subscription) {
+        // Mettre à jour l'abonnement
+        await prisma.paystackSubscription.update({
+          where: { paystackId: data.metadata.subscription_code },
+          data: {
+            status: 'ACTIVE',
+            currentPeriodEnd: data.paid_at 
+              ? new Date(new Date(data.paid_at).getTime() + 30 * 24 * 60 * 60 * 1000) 
+              : null,
+            updatedAt: new Date(),
+          },
+        });
+
+        // 🎯 RENOUVELLEMENT : ATTRIBUTION DES CRÉDITS
+        if (subscription.plan.credits > 0) {
+          await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+              where: { id: user.id },
+              data: {
+                credits: { increment: subscription.plan.credits },
+                creditsUpdatedAt: new Date(),
+              },
+            });
+
+            await tx.creditTransaction.create({
+              data: {
+                userId: user.id,
+                amount: subscription.plan.credits,
+                type: 'SUBSCRIPTION',
+                description: `Renouvellement abonnement ${subscription.plan.name}`,
+                planId: subscription.plan.id,
+                transactionRef: reference,
+                metadata: {
+                  planName: subscription.plan.name,
+                  renewal: true,
+                  paystackReference: reference,
+                },
+              },
+            });
+
+            console.log(`🔄 Renouvellement: ${subscription.plan.credits} crédits ajoutés à ${customerEmail}`);
+          });
+
+          // Notification de renouvellement
+          await prisma.notification.create({
+            data: {
+              userId: user.id,
+              type: 'SUCCESS',
+              title: 'Abonnement renouvelé',
+              message: `Votre abonnement ${subscription.plan.name} a été renouvelé. ${subscription.plan.credits} crédits ajoutés !`,
+              metadata: {
+                credits: subscription.plan.credits,
+                planName: subscription.plan.name,
+                reference,
+              },
+            },
+          });
+        }
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erreur handlePaystackChargeSuccess:', error)
+    throw error; // Re-throw pour que le webhook puisse être rejoué
   }
 }

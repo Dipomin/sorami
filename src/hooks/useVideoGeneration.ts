@@ -41,7 +41,7 @@ export function useVideoGeneration() {
       setResult(null);
       setCurrentStatus(null);
 
-      // Obtenir le token d'authentification
+      // Obtenir le token d'authentification initial
       const token = await getToken();
       
       if (!token) {
@@ -53,9 +53,10 @@ export function useVideoGeneration() {
       console.log('🎬 Job de génération créé:', jobResponse.job_id);
 
       // Polling avec callback de progression
+      // ✅ Passer la fonction getToken pour rafraîchir le token automatiquement
       const finalResult = await pollVideoGenerationStatus(
         jobResponse.job_id,
-        token, // Passer le token au polling
+        getToken, // Passer la fonction, pas le token
         (status) => {
           setCurrentStatus(status);
           setProgress(status.progress);

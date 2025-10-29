@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getCurrentUser, requireAuth } from '@/lib/auth';
+import { deductCredits } from '@/lib/credits';
 
 const prisma = new PrismaClient();
 
@@ -59,6 +60,36 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // 🪙 Déduction des crédits AVANT la génération du livre
+    const creditResult = await deductCredits({
+      userId: user.id,
+      contentType: 'BOOK',
+      quantity: 1,
+      metadata: {
+        title: title?.substring(0, 100),
+        topic: topic?.substring(0, 100),
+        chaptersCount: chapters.length,
+      },
+    });
+
+    if (!creditResult.success) {
+      console.error('❌ [Book Create API] Crédits insuffisants:', creditResult.error);
+      return NextResponse.json(
+        {
+          error: 'Insufficient credits',
+          message: creditResult.error,
+          creditsAvailable: creditResult.creditsRemaining,
+          creditsRequired: 10, // 10 crédits par livre
+        },
+        { status: 402 } // Payment Required
+      );
+    }
+
+    console.log('✅ [Book Create API] Crédits déduits:', {
+      deducted: creditResult.creditsDeducted,
+      remaining: creditResult.creditsRemaining,
+    });
     
     // Créer le livre avec ses chapitres
     const book = await prisma.book.create({

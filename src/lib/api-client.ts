@@ -657,26 +657,32 @@ export async function fetchVideoResult(jobId: string, token: string): Promise<Vi
  */
 export async function pollVideoGenerationStatus(
   jobId: string,
-  token: string,
+  getTokenFn: () => Promise<string | null>,
   onProgress?: (status: VideoStatusResponse) => void,
   maxAttempts: number = 40,
   intervalMs: number = 5000
 ): Promise<VideoResultResponse> {
-  if (!token) {
-    throw new Error('Token d\'authentification manquant');
-  }
-
   let attempts = 0;
   
   while (attempts < maxAttempts) {
-    const statusData = await fetchVideoStatus(jobId, token);
+    // ✅ Rafraîchir le token AVANT CHAQUE requête
+    const freshToken = await getTokenFn();
+    
+    if (!freshToken) {
+      throw new Error('Token d\'authentification manquant');
+    }
+    
+    // ⏱️ Petit délai pour éviter les problèmes de clock skew (iat)
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    const statusData = await fetchVideoStatus(jobId, freshToken);
     
     if (onProgress) {
       onProgress(statusData);
     }
     
     if (statusData.status === 'completed') {
-      return await fetchVideoResult(jobId, token);
+      return await fetchVideoResult(jobId, freshToken);
     }
     
     if (statusData.status === 'failed') {
