@@ -66,29 +66,25 @@ const steps = [
 const pricingPlans = [
   {
     name: "Gratuit",
-    price: "0 €",
+    price: "0 F",
     period: "/ mois",
     description: "Pour découvrir la plateforme",
     features: [
-      "10 crédits par mois",
+      "10 crédits",
       "Génération d'images (watermark)",
       "Articles de blog basiques",
-      "Support communautaire",
-      "Stockage 500 MB",
     ],
     cta: "Commencer gratuitement",
     highlighted: false,
   },
   {
     name: "Pro",
-    price: "29 €",
+    price: "15000 F CFA",
     period: "/ mois",
     description: "Pour les créateurs ambitieux",
     features: [
       "500 crédits par mois",
-      "Génération sans watermark",
       "Vidéos HD jusqu'à 1080p",
-      "Export ebook illimité",
       "Accès prioritaire aux modèles",
       "Stockage 50 GB",
       "Support prioritaire",
@@ -98,19 +94,17 @@ const pricingPlans = [
   },
   {
     name: "Enterprise",
-    price: "Sur mesure",
-    period: "",
+    price: "35 000 F CFA",
+    period: " / mois",
     description: "Pour les équipes et entreprises",
     features: [
-      "Crédits illimités",
       "API complète",
       "Support dédié 24/7",
       "SSO & conformité",
       "SLA garanti",
       "Formation personnalisée",
-      "Facturation sur devis",
     ],
-    cta: "Contactez-nous",
+    cta: "Essayer Enterprise",
     highlighted: false,
   },
 ];
@@ -354,7 +348,7 @@ const HomePage = () => {
                   </h3>
                   <p className="text-dark-300 mb-4">{plan.description}</p>
                   <div className="flex items-baseline">
-                    <span className="text-5xl font-bold text-white">
+                    <span className="text-4xl font-bold text-white">
                       {plan.price}
                     </span>
                     <span className="text-dark-400 ml-2">{plan.period}</span>
@@ -371,6 +365,10 @@ const HomePage = () => {
                 </ul>
 
                 <Button
+                  //asChild
+                  onClick={() => {
+                    window.location.href = "/dashboard";
+                  }}
                   variant={plan.highlighted ? "glow" : "outline"}
                   className="w-full"
                   size="lg"
@@ -394,7 +392,7 @@ const HomePage = () => {
             </div>
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              <span>+2500 créateurs</span>
+              <span>+100 créateurs</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="w-5 h-5" />
