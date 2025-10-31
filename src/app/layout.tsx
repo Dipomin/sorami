@@ -19,7 +19,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Sorami - Plateforme IA Tout-en-Un",
+  title: "Sorami - Plateforme d'Intelligence Artificielle pour la création de contenu",
   description:
     "Créez des images, vidéos, articles de blog et ebooks avec l'intelligence artificielle",
 };
