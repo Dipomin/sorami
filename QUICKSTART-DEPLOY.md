@@ -73,6 +73,9 @@ NEXT_PUBLIC_WEBHOOK_URL="https://sorami.app/api/webhooks"
 # Application
 NEXT_PUBLIC_APP_URL="https://sorami.app"
 NODE_ENV="production"
+
+# OpenAI (REQUIS pour formatage livres)
+OPENAI_API_KEY="sk-proj-..."
 ```
 
 **✅ Checklist avant de continuer :**
