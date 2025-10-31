@@ -121,14 +121,15 @@ if [ ! -f "$ENV_FILE" ]; then
     log_error "   WEBHOOK_SECRET=\"sorami-webhook-secret-key-2025\""
     log_error ""
     log_error "💡 Ou copiez depuis l'exemple :"
-    log_error "   cp .env.example $ENV_FILE"
+    log_error "   cp .env.production.example $ENV_FILE"
     log_error "   nano $ENV_FILE  # Puis éditez avec vos vraies valeurs"
     exit 1
 fi
 
-# Copier le fichier d'environnement
-cp $ENV_FILE .env.production
-log_success "✅ Variables d'environnement configurées"
+# Copier le fichier d'environnement vers .env (utilisé par Next.js)
+log_info "Configuration de .env pour le build..."
+cp $ENV_FILE .env
+log_success "✅ Variables d'environnement configurées ($ENV_FILE → .env)"
 
 # 6. Installer les dépendances
 log_info "📦 Installation des dépendances..."
