@@ -61,18 +61,26 @@ NEXT_PUBLIC_API_URL="https://api.sorami.app"
 ### 3️⃣ Configuration Nginx et SSL (3 minutes)
 
 ```bash
-# Copier la configuration Nginx
-sudo cp nginx-sorami.conf /etc/nginx/sites-available/sorami
+# Créer le dossier pour Certbot
+sudo mkdir -p /var/www/certbot
+
+# ÉTAPE 1: Configuration temporaire sans SSL
+sudo cp nginx-sorami-temp.conf /etc/nginx/sites-available/sorami
 sudo ln -s /etc/nginx/sites-available/sorami /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
 
-# Tester la configuration
+# Tester la configuration temporaire
 sudo nginx -t
+sudo systemctl reload nginx
 
-# Obtenir le certificat SSL
+# ÉTAPE 2: Obtenir le certificat SSL avec Certbot
 sudo certbot --nginx -d sorami.app -d www.sorami.app
 
-# Recharger Nginx
+# ÉTAPE 3: Remplacer par la configuration complète avec SSL
+sudo cp nginx-sorami.conf /etc/nginx/sites-available/sorami
+
+# Tester la configuration finale
+sudo nginx -t
 sudo systemctl reload nginx
 ```
 
