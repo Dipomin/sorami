@@ -193,10 +193,10 @@ cp /etc/ssh/sshd_config /etc/ssh/sshd_config.backup
 
 # Configurer SSH
 cat > /etc/ssh/sshd_config.d/security.conf << 'EOF'
-# Désactiver le login root
-PermitRootLogin no
+# Login root autorisé (pour la maintenance)
+# PermitRootLogin no  # Décommenté pour permettre l'accès root
 
-# Désactiver l'authentification par mot de passe
+# Désactiver l'authentification par mot de passe (sécurité par clé SSH)
 PasswordAuthentication no
 PubkeyAuthentication yes
 
@@ -207,8 +207,8 @@ ClientAliveInterval 300
 ClientAliveCountMax 2
 EOF
 
-log_warning "⚠️  SSH sera sécurisé lors du prochain redémarrage"
-log_warning "⚠️  Assurez-vous d'avoir configuré vos clés SSH avant de redémarrer!"
+log_success "✅ SSH sécurisé (authentification par clé uniquement)"
+log_info "ℹ️  Login root reste activé pour la maintenance"
 
 # 11. Installation de logrotate pour les logs
 log_info "📜 Configuration de logrotate..."
