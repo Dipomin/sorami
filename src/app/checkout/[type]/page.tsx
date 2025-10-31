@@ -6,11 +6,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-function CheckoutContent({
-  params,
-}: {
-  params: Promise<{ type: string }>;
-}) {
+function CheckoutContent({ params }: { params: Promise<{ type: string }> }) {
   const { type } = use(params);
   const search = useSearchParams();
   const plan = search?.get("plan");
