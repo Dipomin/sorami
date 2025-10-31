@@ -78,12 +78,14 @@ sudo systemctl reload nginx
 # ÉTAPE 2: Obtenir le certificat SSL avec Certbot
 sudo certbot --nginx -d sorami.app -d www.sorami.app
 
-# ÉTAPE 3: Remplacer par la configuration complète avec SSL
-sudo cp nginx-sorami.conf /etc/nginx/sites-available/sorami
+# ÉTAPE 3: Corriger les conflits et appliquer la configuration optimale
+chmod +x fix-nginx-conflict.sh
+./fix-nginx-conflict.sh
 
-# Tester la configuration finale
-sudo nginx -t
-sudo systemctl reload nginx
+# Note: Le script va automatiquement :
+# - Sauvegarder la config actuelle
+# - Appliquer nginx-sorami.conf (config complète)
+# - Tester et recharger Nginx
 ```
 
 ### 4️⃣ Premier déploiement (5 minutes)
@@ -183,6 +185,18 @@ sudo systemctl reload nginx
 ### ❌ Certificat SSL non valide
 ```bash
 sudo certbot renew
+sudo systemctl reload nginx
+```
+
+### ⚠️ Avertissement "conflicting server name" après Certbot
+```bash
+# Utiliser le script de correction
+cd ~/sorami
+./fix-nginx-conflict.sh
+
+# Ou manuellement :
+sudo cp nginx-sorami.conf /etc/nginx/sites-available/sorami
+sudo nginx -t
 sudo systemctl reload nginx
 ```
 
