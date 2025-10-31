@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 
-export default function PaystackCallbackPage() {
+function PaystackCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { getToken } = useAuth();
@@ -126,5 +126,23 @@ export default function PaystackCallbackPage() {
         )}
       </motion.div>
     </div>
+  );
+}
+
+// Wrapper avec Suspense pour Next.js 15
+export default function PaystackCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-violet-500 animate-spin mx-auto mb-4" />
+            <p className="text-dark-300">Chargement...</p>
+          </div>
+        </div>
+      }
+    >
+      <PaystackCallbackContent />
+    </Suspense>
   );
 }

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, use } from "react";
+import React, { useState, use, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
-export default function CheckoutPage({
+function CheckoutContent({
   params,
 }: {
   params: Promise<{ type: string }>;
@@ -75,5 +76,26 @@ export default function CheckoutPage({
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+// Wrapper avec Suspense pour Next.js 15
+export default function CheckoutPage({
+  params,
+}: {
+  params: Promise<{ type: string }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
+          </div>
+        </DashboardLayout>
+      }
+    >
+      <CheckoutContent params={params} />
+    </Suspense>
   );
 }
