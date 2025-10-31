@@ -104,6 +104,25 @@ ENV_FILE=".env.$ENV"
 
 if [ ! -f "$ENV_FILE" ]; then
     log_error "Fichier $ENV_FILE manquant!"
+    log_error ""
+    log_error "📝 Pour créer le fichier, exécutez :"
+    log_error "   nano $ENV_FILE"
+    log_error ""
+    log_error "📋 Variables requises :"
+    log_error "   DATABASE_URL=\"mysql://user:pass@host:3306/sorami\""
+    log_error "   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=\"pk_live_...\""
+    log_error "   CLERK_SECRET_KEY=\"sk_live_...\""
+    log_error "   PAYSTACK_SECRET_KEY=\"sk_live_...\""
+    log_error "   PAYSTACK_PUBLIC_KEY=\"pk_live_...\""
+    log_error "   AWS_ACCESS_KEY_ID=\"AKIA...\""
+    log_error "   AWS_SECRET_ACCESS_KEY=\"...\""
+    log_error "   AWS_S3_BUCKET_NAME=\"sorami-production\""
+    log_error "   NEXT_PUBLIC_API_URL=\"https://api.sorami.app\""
+    log_error "   WEBHOOK_SECRET=\"sorami-webhook-secret-key-2025\""
+    log_error ""
+    log_error "💡 Ou copiez depuis l'exemple :"
+    log_error "   cp .env.example $ENV_FILE"
+    log_error "   nano $ENV_FILE  # Puis éditez avec vos vraies valeurs"
     exit 1
 fi
 

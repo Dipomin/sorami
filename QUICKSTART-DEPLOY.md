@@ -38,25 +38,49 @@ ssh sorami@votre-ip-vps
 git clone https://github.com/Dipomin/sorami.git
 cd sorami
 
-# Créer le fichier d'environnement
-cp .env.example .env.production
+# Créer le fichier d'environnement de production
+cp .env.production.example .env.production
 
-# Éditer avec vos valeurs
+# Éditer avec VOS VRAIES VALEURS DE PRODUCTION
 nano .env.production
 ```
 
-**Variables essentielles à configurer :**
+**⚠️ Variables OBLIGATOIRES à configurer (avec clés PRODUCTION) :**
 ```bash
+# Base de données MySQL (PRODUCTION)
 DATABASE_URL="mysql://user:pass@host:3306/sorami"
+
+# Clerk Authentication (LIVE KEYS - pk_live_ et sk_live_)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_live_..."
 CLERK_SECRET_KEY="sk_live_..."
+
+# Paystack Payment (LIVE KEYS - pk_live_ et sk_live_)
 PAYSTACK_SECRET_KEY="sk_live_..."
 PAYSTACK_PUBLIC_KEY="pk_live_..."
+
+# AWS S3 Storage (bucket PRODUCTION)
 AWS_ACCESS_KEY_ID="AKIA..."
 AWS_SECRET_ACCESS_KEY="..."
 AWS_S3_BUCKET_NAME="sorami-production"
+
+# Backend API (déjà déployé)
 NEXT_PUBLIC_API_URL="https://api.sorami.app"
+
+# Webhooks
+WEBHOOK_SECRET="sorami-webhook-secret-key-2025"
+NEXT_PUBLIC_WEBHOOK_URL="https://sorami.app/api/webhooks"
+
+# Application
+NEXT_PUBLIC_APP_URL="https://sorami.app"
+NODE_ENV="production"
 ```
+
+**✅ Checklist avant de continuer :**
+- [ ] Toutes les clés sont en mode PRODUCTION (live/prod)
+- [ ] La base de données MySQL est accessible
+- [ ] Le backend https://api.sorami.app est en ligne
+- [ ] Le bucket S3 existe et les permissions IAM sont configurées
+- [ ] Les webhooks Paystack pointent vers votre domaine
 
 ### 3️⃣ Configuration Nginx et SSL (3 minutes)
 
