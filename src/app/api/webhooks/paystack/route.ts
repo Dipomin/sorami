@@ -302,6 +302,13 @@ async function handlePaystackChargeSuccess(data: any) {
 
       let subscription;
       if (!existingSubscription) {
+        // Détecter le cycle de facturation depuis le plan ou les métadonnées
+        const billingCycle = data.metadata?.billingCycle || 
+                            (plan.interval === 'annually' ? 'annually' : 'monthly');
+        
+        // Calculer la date de fin selon le cycle
+        const periodDays = billingCycle === 'annually' ? 365 : 30;
+        
         // Créer l'abonnement
         subscription = await prisma.paystackSubscription.create({
           data: {
@@ -309,14 +316,16 @@ async function handlePaystackChargeSuccess(data: any) {
             paystackId: data.metadata?.subscription_code || `sub_${reference}`,
             planId: plan.id,
             status: 'ACTIVE',
+            billingCycle,
             currentPeriodEnd: data.paid_at 
-              ? new Date(new Date(data.paid_at).getTime() + 30 * 24 * 60 * 60 * 1000) 
+              ? new Date(new Date(data.paid_at).getTime() + periodDays * 24 * 60 * 60 * 1000) 
               : null,
             providerData: {
               customer_code: data.customer?.customer_code,
               plan_code: data.plan.plan_code,
               authorization: data.authorization,
               first_payment_reference: reference,
+              billingCycle,
             },
           },
         });

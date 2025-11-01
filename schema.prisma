@@ -1320,6 +1320,7 @@ model PaystackSubscription {
   planId            String
   plan              PaystackPlan                 @relation(fields: [planId], references: [id])
   status            PaystackSubscriptionStatus   @default(ACTIVE)
+  billingCycle      String                       @default("monthly") // "monthly" ou "annually"
   currentPeriodEnd  DateTime?
   cancelAtPeriodEnd Boolean                      @default(false)
   providerData      Json?
@@ -1328,6 +1329,7 @@ model PaystackSubscription {
 
   @@index([userId])
   @@index([status])
+  @@index([billingCycle])
   @@map("paystack_subscriptions")
 }
 

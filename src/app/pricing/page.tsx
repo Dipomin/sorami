@@ -67,7 +67,7 @@ export default function PricingPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [billingCycle]); // Recharger quand le cycle change
 
   const loadData = async () => {
     try {
@@ -81,11 +81,13 @@ export default function PricingPage() {
       }
       const plansData = await plansResponse.json();
 
-      // Filtrer pour ne garder que nos 2 plans de production
+      // Filtrer pour ne garder que nos plans de production selon le cycle de facturation
+      const productionPlanIds = billingCycle === 'monthly' 
+        ? ['PLN_dbrclylu9lqaraa', 'PLN_grjhlpleqbx9hyc'] // Plans mensuels
+        : ['PLN_99h6qfha7ira9p8', 'PLN_gvaroq26yvdra7e']; // Plans annuels
+      
       const productionPlans = (plansData.plans || []).filter(
-        (plan: Plan) =>
-          plan.paystackId === "PLN_dbrclylu9lqaraa" || // STANDARD
-          plan.paystackId === "PLN_grjhlpleqbx9hyc" // CRÉATEUR
+        (plan: Plan) => productionPlanIds.includes(plan.paystackId)
       );
 
       setPlans(productionPlans);
@@ -252,18 +254,16 @@ export default function PricingPage() {
             const isCurrentPlan = currentSubscription?.plan.id === plan.id;
             const isSubscribing = subscribingPlanId === plan.id;
 
-            // Calcul du prix selon le cycle de facturation
+            // Affichage du prix direct depuis le plan (les plans annuels sont déjà créés dans Paystack)
             const isAnnual = billingCycle === "annually";
-            const displayAmount = isAnnual
-              ? Math.round((plan.amount / 100) * 12 * 0.8) // 20% de réduction annuelle
-              : plan.amount / 100;
+            const displayAmount = plan.amount / 100;
             const monthlyEquivalent = isAnnual
               ? Math.round(displayAmount / 12)
               : null;
 
-            // Détails spécifiques par plan
-            const planDetails =
-              plan.paystackId === "PLN_dbrclylu9lqaraa"
+            // Détails spécifiques par plan (basé sur le paystackId)
+            const isStandardPlan = plan.paystackId === "PLN_dbrclylu9lqaraa" || plan.paystackId === "PLN_99h6qfha7ira9p8";
+            const planDetails = isStandardPlan
                 ? {
                     features: [
                       "3 500 crédits par mois",
