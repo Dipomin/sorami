@@ -82,12 +82,13 @@ export default function PricingPage() {
       const plansData = await plansResponse.json();
 
       // Filtrer pour ne garder que nos plans de production selon le cycle de facturation
-      const productionPlanIds = billingCycle === 'monthly' 
-        ? ['PLN_dbrclylu9lqaraa', 'PLN_grjhlpleqbx9hyc'] // Plans mensuels
-        : ['PLN_99h6qfha7ira9p8', 'PLN_gvaroq26yvdra7e']; // Plans annuels
-      
-      const productionPlans = (plansData.plans || []).filter(
-        (plan: Plan) => productionPlanIds.includes(plan.paystackId)
+      const productionPlanIds =
+        billingCycle === "monthly"
+          ? ["PLN_dbrclylu9lqaraa", "PLN_grjhlpleqbx9hyc"] // Plans mensuels
+          : ["PLN_99h6qfha7ira9p8", "PLN_gvaroq26yvdra7e"]; // Plans annuels
+
+      const productionPlans = (plansData.plans || []).filter((plan: Plan) =>
+        productionPlanIds.includes(plan.paystackId)
       );
 
       setPlans(productionPlans);
@@ -262,32 +263,34 @@ export default function PricingPage() {
               : null;
 
             // Détails spécifiques par plan (basé sur le paystackId)
-            const isStandardPlan = plan.paystackId === "PLN_dbrclylu9lqaraa" || plan.paystackId === "PLN_99h6qfha7ira9p8";
+            const isStandardPlan =
+              plan.paystackId === "PLN_dbrclylu9lqaraa" ||
+              plan.paystackId === "PLN_99h6qfha7ira9p8";
             const planDetails = isStandardPlan
-                ? {
-                    features: [
-                      "3 500 crédits par mois",
-                      "100 images haute qualité",
-                      "10 articles de blog optimisés SEO",
-                      "3 vidéos HD",
-                      "Stockage cloud sécurisé",
-                      "Support prioritaire",
-                    ],
-                    badge: null,
-                  }
-                : {
-                    features: [
-                      "8 000 crédits par mois",
-                      "700 images premium",
-                      "50 articles de blog professionnels",
-                      "10 vidéos HD personnalisées",
-                      "5 ebooks complets",
-                      "API complète",
-                      "Support dédié 24/7",
-                      "Analytiques avancées",
-                    ],
-                    badge: "🔥 POPULAIRE",
-                  };
+              ? {
+                  features: [
+                    "3 500 crédits par mois",
+                    "100 images haute qualité",
+                    "10 articles de blog optimisés SEO",
+                    "3 vidéos HD",
+                    "Stockage cloud sécurisé",
+                    "Support prioritaire",
+                  ],
+                  badge: null,
+                }
+              : {
+                  features: [
+                    "8 000 crédits par mois",
+                    "700 images premium",
+                    "50 articles de blog professionnels",
+                    "10 vidéos HD personnalisées",
+                    "5 ebooks complets",
+                    "API complète",
+                    "Support dédié 24/7",
+                    "Analytiques avancées",
+                  ],
+                  badge: "🔥 POPULAIRE",
+                };
 
             return (
               <motion.div
