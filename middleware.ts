@@ -4,17 +4,19 @@ import { NextResponse } from 'next/server';
 const isProtectedRoute = createRouteMatcher([
   '/create(.*)',
   '/books(.*)',
-  '/blog(.*)',
   '/jobs(.*)',
   '/dashboard(.*)',
   '/generate-images(.*)',
   '/generate-videos(.*)',
+  '/admin(.*)', // Routes admin (blog, etc.)
 ]);
 
 const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/blog(.*)', // Pages publiques du blog
+  '/legal(.*)', // Pages légales
   '/api/webhooks/clerk',
   '/api/webhooks/book-completion', // Webhook pour la complétion des livres
   '/api/webhooks/blog-completion', // Webhook pour la complétion des articles de blog
@@ -23,6 +25,9 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/video-completion', // Webhook pour la complétion des vidéos
   '/api/webhooks/video-personnalisee-completion', // Webhook pour la complétion des vidéos personnalisées
   '/api/books', // API publique pour la liste des livres
+  '/api/blog/posts', // API publique pour les articles (GET seulement)
+  '/api/blog/categories', // API publique pour les catégories (GET seulement)
+  '/api/legal(.*)', // API publique pour les pages légales
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
