@@ -32,9 +32,6 @@ const nextConfig = {
   // Configuration pour le déploiement standalone (Docker/VPS)
   output: 'standalone',
   
-  // Optimisations de production
-  swcMinify: true,
-  
   // Configuration des headers de sécurité
   async headers() {
     return [
