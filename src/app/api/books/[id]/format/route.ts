@@ -5,10 +5,6 @@ import OpenAI from 'openai';
 
 const prisma = new PrismaClient();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const PROFESSIONAL_FORMAT_PROMPT = `Contexte :
 Tu es un expert en édition, typographie et mise en page professionnelle de livres imprimés et numériques.
 Tu maîtrises les normes de mise en forme éditoriale (marges, titres, interlignes, pagination, etc.) utilisées dans l'édition littéraire et scientifique.
@@ -49,6 +45,11 @@ export async function POST(
     const user = await requireAuth();
     const resolvedParams = await params;
     const bookId = resolvedParams.id;
+
+    // Initialize OpenAI client (must be inside handler to avoid build-time errors)
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     console.log('📚 [Format API] Début de la mise en forme professionnelle du livre:', bookId);
 

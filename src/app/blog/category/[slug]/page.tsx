@@ -3,12 +3,12 @@
  * Liste des articles d'une catégorie spécifique
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
 
 interface BlogPost {
   id: string;
@@ -56,14 +56,16 @@ export default function CategoryPage() {
       setIsLoading(true);
       try {
         // Récupérer la catégorie
-        const categoriesResponse = await fetch('/api/blog/categories');
+        const categoriesResponse = await fetch("/api/blog/categories");
         const categories = await categoriesResponse.json();
-        const foundCategory = categories.find((c: Category) => c.slug === categorySlug);
-        
+        const foundCategory = categories.find(
+          (c: Category) => c.slug === categorySlug
+        );
+
         if (!foundCategory) {
-          throw new Error('Catégorie non trouvée');
+          throw new Error("Catégorie non trouvée");
         }
-        
+
         setCategory(foundCategory);
 
         // Récupérer les articles
@@ -71,7 +73,7 @@ export default function CategoryPage() {
           `/api/blog/posts?category=${foundCategory.id}&page=${pagination.page}&pageSize=${pagination.pageSize}`
         );
         const postsData = await postsResponse.json();
-        
+
         setPosts(postsData.posts || []);
         setPagination(postsData.pagination || pagination);
       } catch (err: any) {
@@ -96,8 +98,12 @@ export default function CategoryPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-4">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Catégorie non trouvée</h1>
-          <p className="text-slate-400 mb-8">{error || 'Cette catégorie n\'existe pas.'}</p>
+          <h1 className="text-4xl font-bold text-white mb-4">
+            Catégorie non trouvée
+          </h1>
+          <p className="text-slate-400 mb-8">
+            {error || "Cette catégorie n'existe pas."}
+          </p>
           <Link
             href="/blog"
             className="inline-block px-6 py-3 bg-violet-600 text-white rounded-lg hover:bg-violet-700 transition-colors"
@@ -118,8 +124,18 @@ export default function CategoryPage() {
             href="/blog"
             className="inline-flex items-center space-x-2 text-slate-400 hover:text-white transition-colors mb-6"
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             <span>Retour au blog</span>
           </Link>
@@ -132,18 +148,20 @@ export default function CategoryPage() {
             {category.icon && (
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl"
-                style={{ backgroundColor: category.color || '#6366f1' }}
+                style={{ backgroundColor: category.color || "#6366f1" }}
               >
                 {category.icon}
               </div>
             )}
             <div className="flex-1">
-              <h1 className="text-4xl font-bold text-white mb-2">{category.name}</h1>
+              <h1 className="text-4xl font-bold text-white mb-2">
+                {category.name}
+              </h1>
               {category.description && (
                 <p className="text-lg text-slate-400">{category.description}</p>
               )}
               <p className="text-sm text-slate-500 mt-2">
-                {pagination.total} article{pagination.total > 1 ? 's' : ''}
+                {pagination.total} article{pagination.total > 1 ? "s" : ""}
               </p>
             </div>
           </motion.div>
@@ -167,8 +185,12 @@ export default function CategoryPage() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <h2 className="text-2xl font-bold text-white mb-2">Aucun article</h2>
-            <p className="text-slate-400">Aucun article n'a encore été publié dans cette catégorie.</p>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Aucun article
+            </h2>
+            <p className="text-slate-400">
+              Aucun article n'a encore été publié dans cette catégorie.
+            </p>
           </div>
         ) : (
           <>
@@ -226,30 +248,55 @@ export default function CategoryPage() {
                           {post.author.avatar ? (
                             <img
                               src={post.author.avatar}
-                              alt={post.author.name || 'Author'}
+                              alt={post.author.name || "Author"}
                               className="w-6 h-6 rounded-full"
                             />
                           ) : (
                             <div className="w-6 h-6 bg-violet-600 rounded-full flex items-center justify-center text-white text-xs">
-                              {(post.author.name || 'A')[0].toUpperCase()}
+                              {(post.author.name || "A")[0].toUpperCase()}
                             </div>
                           )}
-                          <span>{post.author.name || 'Auteur'}</span>
+                          <span>{post.author.name || "Auteur"}</span>
                         </div>
 
                         <div className="flex items-center space-x-3">
                           {post.readingTime && (
                             <span className="flex items-center space-x-1">
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              <svg
+                                className="w-3 h-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
                               </svg>
                               <span>{post.readingTime}min</span>
                             </span>
                           )}
                           <span className="flex items-center space-x-1">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                              />
                             </svg>
                             <span>{post.viewsCount}</span>
                           </span>
@@ -265,7 +312,9 @@ export default function CategoryPage() {
             {pagination.totalPages > 1 && (
               <div className="flex items-center justify-center space-x-4">
                 <button
-                  onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+                  onClick={() =>
+                    setPagination({ ...pagination, page: pagination.page - 1 })
+                  }
                   disabled={pagination.page === 1}
                   className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
                 >
@@ -275,7 +324,9 @@ export default function CategoryPage() {
                   Page {pagination.page} sur {pagination.totalPages}
                 </span>
                 <button
-                  onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+                  onClick={() =>
+                    setPagination({ ...pagination, page: pagination.page + 1 })
+                  }
                   disabled={pagination.page === pagination.totalPages}
                   className="px-4 py-2 bg-slate-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700 transition-colors"
                 >

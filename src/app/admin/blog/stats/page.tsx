@@ -3,13 +3,13 @@
  * Statistiques du blog
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useBlogPosts } from '@/hooks/useBlogPosts';
-import { useBlogComments } from '@/hooks/useBlogComments';
-import { useBlogCategories } from '@/hooks/useBlogCategories';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { useBlogPosts } from "@/hooks/useBlogPosts";
+import { useBlogComments } from "@/hooks/useBlogComments";
+import { useBlogCategories } from "@/hooks/useBlogCategories";
+import { motion } from "framer-motion";
 
 export default function AdminStatsPage() {
   const { posts } = useBlogPosts({ limit: 1000 }); // Récupérer tous les posts
@@ -33,13 +33,14 @@ export default function AdminStatsPage() {
   useEffect(() => {
     if (posts.length > 0) {
       const totalViews = posts.reduce((sum, post) => sum + post.viewsCount, 0);
-      const publishedPosts = posts.filter(p => p.published).length;
-      const draftPosts = posts.filter(p => p.status === 'DRAFT').length;
+      const publishedPosts = posts.filter((p) => p.published).length;
+      const draftPosts = posts.filter((p) => p.status === "DRAFT").length;
       const avgReadingTime = Math.round(
-        posts.reduce((sum, post) => sum + (post.readingTime || 0), 0) / posts.length
+        posts.reduce((sum, post) => sum + (post.readingTime || 0), 0) /
+          posts.length
       );
 
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         totalPosts: posts.length,
         publishedPosts,
@@ -58,10 +59,10 @@ export default function AdminStatsPage() {
 
   useEffect(() => {
     if (comments.length > 0) {
-      const pending = comments.filter(c => c.status === 'PENDING').length;
-      const approved = comments.filter(c => c.status === 'APPROVED').length;
+      const pending = comments.filter((c) => c.status === "PENDING").length;
+      const approved = comments.filter((c) => c.status === "APPROVED").length;
 
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         totalComments: comments.length,
         pendingComments: pending,
@@ -72,7 +73,7 @@ export default function AdminStatsPage() {
 
   useEffect(() => {
     if (categories.length > 0) {
-      setStats(prev => ({
+      setStats((prev) => ({
         ...prev,
         totalCategories: categories.length,
       }));
@@ -81,39 +82,43 @@ export default function AdminStatsPage() {
 
   const statCards = [
     {
-      title: 'Articles Totaux',
+      title: "Articles Totaux",
       value: stats.totalPosts,
-      icon: '📝',
-      color: 'from-violet-600 to-indigo-600',
+      icon: "📝",
+      color: "from-violet-600 to-indigo-600",
       detail: `${stats.publishedPosts} publiés, ${stats.draftPosts} brouillons`,
     },
     {
-      title: 'Vues Totales',
-      value: stats.totalViews.toLocaleString('fr-FR'),
-      icon: '👁️',
-      color: 'from-blue-600 to-cyan-600',
-      detail: `${Math.round(stats.totalViews / (stats.publishedPosts || 1))} vues/article en moyenne`,
+      title: "Vues Totales",
+      value: stats.totalViews.toLocaleString("fr-FR"),
+      icon: "👁️",
+      color: "from-blue-600 to-cyan-600",
+      detail: `${Math.round(
+        stats.totalViews / (stats.publishedPosts || 1)
+      )} vues/article en moyenne`,
     },
     {
-      title: 'Commentaires',
+      title: "Commentaires",
       value: stats.totalComments,
-      icon: '💬',
-      color: 'from-green-600 to-emerald-600',
+      icon: "💬",
+      color: "from-green-600 to-emerald-600",
       detail: `${stats.pendingComments} en attente, ${stats.approvedComments} approuvés`,
     },
     {
-      title: 'Catégories',
+      title: "Catégories",
       value: stats.totalCategories,
-      icon: '🏷️',
-      color: 'from-orange-600 to-red-600',
-      detail: `${Math.round(stats.totalPosts / (stats.totalCategories || 1))} articles/catégorie`,
+      icon: "🏷️",
+      color: "from-orange-600 to-red-600",
+      detail: `${Math.round(
+        stats.totalPosts / (stats.totalCategories || 1)
+      )} articles/catégorie`,
     },
     {
-      title: 'Temps de Lecture Moyen',
+      title: "Temps de Lecture Moyen",
       value: `${stats.avgReadingTime} min`,
-      icon: '⏱️',
-      color: 'from-purple-600 to-pink-600',
-      detail: 'Par article',
+      icon: "⏱️",
+      color: "from-purple-600 to-pink-600",
+      detail: "Par article",
     },
   ];
 
@@ -142,7 +147,9 @@ export default function AdminStatsPage() {
                 {card.icon}
               </div>
             </div>
-            <h3 className="text-slate-400 text-sm font-medium mb-1">{card.title}</h3>
+            <h3 className="text-slate-400 text-sm font-medium mb-1">
+              {card.title}
+            </h3>
             <p className="text-3xl font-bold text-white mb-2">{card.value}</p>
             <p className="text-slate-500 text-sm">{card.detail}</p>
           </motion.div>
@@ -154,7 +161,9 @@ export default function AdminStatsPage() {
         <h2 className="text-xl font-bold text-white mb-6">📈 Top 5 Articles</h2>
         <div className="space-y-4">
           {topPosts.length === 0 ? (
-            <p className="text-slate-400 text-center py-8">Aucun article publié</p>
+            <p className="text-slate-400 text-center py-8">
+              Aucun article publié
+            </p>
           ) : (
             topPosts.map((post, index) => (
               <motion.div
@@ -169,18 +178,45 @@ export default function AdminStatsPage() {
                     {index + 1}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-white font-medium mb-1">{post.title}</h3>
+                    <h3 className="text-white font-medium mb-1">
+                      {post.title}
+                    </h3>
                     <div className="flex items-center space-x-4 text-sm text-slate-400">
                       <span className="flex items-center space-x-1">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
                         </svg>
                         <span>{post.viewsCount} vues</span>
                       </span>
                       <span className="flex items-center space-x-1">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                          />
                         </svg>
                         <span>{post._count?.comments || 0} commentaires</span>
                       </span>
@@ -192,8 +228,18 @@ export default function AdminStatsPage() {
                   target="_blank"
                   className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                    />
                   </svg>
                 </a>
               </motion.div>
@@ -204,17 +250,24 @@ export default function AdminStatsPage() {
 
       {/* Categories Distribution */}
       <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-6">
-        <h2 className="text-xl font-bold text-white mb-6">📊 Répartition par Catégorie</h2>
+        <h2 className="text-xl font-bold text-white mb-6">
+          📊 Répartition par Catégorie
+        </h2>
         <div className="space-y-4">
           {categories.length === 0 ? (
-            <p className="text-slate-400 text-center py-8">Aucune catégorie créée</p>
+            <p className="text-slate-400 text-center py-8">
+              Aucune catégorie créée
+            </p>
           ) : (
             categories
               .sort((a, b) => (b.postsCount || 0) - (a.postsCount || 0))
               .map((category, index) => {
-                const percentage = stats.totalPosts > 0
-                  ? Math.round(((category.postsCount || 0) / stats.totalPosts) * 100)
-                  : 0;
+                const percentage =
+                  stats.totalPosts > 0
+                    ? Math.round(
+                        ((category.postsCount || 0) / stats.totalPosts) * 100
+                      )
+                    : 0;
 
                 return (
                   <motion.div
@@ -226,7 +279,9 @@ export default function AdminStatsPage() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        <span style={{ color: category.color }}>{category.icon || '📁'}</span>
+                        <span style={{ color: category.color }}>
+                          {category.icon || "📁"}
+                        </span>
                         <span className="text-white">{category.name}</span>
                       </div>
                       <span className="text-slate-400 text-sm">
@@ -238,7 +293,7 @@ export default function AdminStatsPage() {
                         className="h-2 rounded-full transition-all"
                         style={{
                           width: `${percentage}%`,
-                          backgroundColor: category.color || '#6366f1',
+                          backgroundColor: category.color || "#6366f1",
                         }}
                       />
                     </div>

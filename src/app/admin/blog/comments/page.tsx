@@ -3,30 +3,42 @@
  * Modération des commentaires de blog
  */
 
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useBlogComments } from '@/hooks/useBlogComments';
-import { motion } from 'framer-motion';
+import { useState } from "react";
+import Link from "next/link";
+import { useBlogComments } from "@/hooks/useBlogComments";
+import { motion } from "framer-motion";
 
 export default function AdminCommentsPage() {
-  const [statusFilter, setStatusFilter] = useState<string>('PENDING');
-  
-  const { comments, pagination, isLoading, approveComment, rejectComment, markAsSpam, deleteComment } = useBlogComments({
+  const [statusFilter, setStatusFilter] = useState<string>("PENDING");
+
+  const {
+    comments,
+    pagination,
+    isLoading,
+    approveComment,
+    rejectComment,
+    markAsSpam,
+    deleteComment,
+  } = useBlogComments({
     status: statusFilter || undefined,
   });
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      PENDING: 'bg-yellow-600 text-white',
-      APPROVED: 'bg-green-600 text-white',
-      REJECTED: 'bg-red-600 text-white',
-      SPAM: 'bg-orange-600 text-white',
+      PENDING: "bg-yellow-600 text-white",
+      APPROVED: "bg-green-600 text-white",
+      REJECTED: "bg-red-600 text-white",
+      SPAM: "bg-orange-600 text-white",
     };
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || 'bg-slate-600'}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${
+          styles[status as keyof typeof styles] || "bg-slate-600"
+        }`}
+      >
         {status}
       </span>
     );
@@ -35,22 +47,22 @@ export default function AdminCommentsPage() {
   const handleAction = async (id: string, action: string) => {
     try {
       switch (action) {
-        case 'approve':
+        case "approve":
           await approveComment(id);
-          alert('Commentaire approuvé !');
+          alert("Commentaire approuvé !");
           break;
-        case 'reject':
+        case "reject":
           await rejectComment(id);
-          alert('Commentaire rejeté !');
+          alert("Commentaire rejeté !");
           break;
-        case 'spam':
+        case "spam":
           await markAsSpam(id);
-          alert('Marqué comme spam !');
+          alert("Marqué comme spam !");
           break;
-        case 'delete':
-          if (confirm('Supprimer ce commentaire définitivement ?')) {
+        case "delete":
+          if (confirm("Supprimer ce commentaire définitivement ?")) {
             await deleteComment(id);
-            alert('Commentaire supprimé !');
+            alert("Commentaire supprimé !");
           }
           break;
       }
@@ -65,26 +77,28 @@ export default function AdminCommentsPage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Commentaires</h1>
-          <p className="text-slate-400">Modérez les commentaires de vos articles</p>
+          <p className="text-slate-400">
+            Modérez les commentaires de vos articles
+          </p>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="flex space-x-2 mb-6 overflow-x-auto">
         {[
-          { value: '', label: 'Tous', count: null },
-          { value: 'PENDING', label: 'En attente', count: null },
-          { value: 'APPROVED', label: 'Approuvés', count: null },
-          { value: 'REJECTED', label: 'Rejetés', count: null },
-          { value: 'SPAM', label: 'Spam', count: null },
+          { value: "", label: "Tous", count: null },
+          { value: "PENDING", label: "En attente", count: null },
+          { value: "APPROVED", label: "Approuvés", count: null },
+          { value: "REJECTED", label: "Rejetés", count: null },
+          { value: "SPAM", label: "Spam", count: null },
         ].map((tab) => (
           <button
             key={tab.value}
             onClick={() => setStatusFilter(tab.value)}
             className={`flex items-center space-x-2 px-6 py-3 rounded-lg whitespace-nowrap transition-all ${
               statusFilter === tab.value
-                ? 'bg-violet-600 text-white shadow-lg'
-                : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800'
+                ? "bg-violet-600 text-white shadow-lg"
+                : "bg-slate-900/50 text-slate-400 hover:bg-slate-800"
             }`}
           >
             <span>{tab.label}</span>
@@ -99,8 +113,18 @@ export default function AdminCommentsPage() {
         </div>
       ) : comments.length === 0 ? (
         <div className="bg-slate-900/50 backdrop-blur-sm rounded-lg p-12 text-center">
-          <svg className="w-16 h-16 text-slate-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          <svg
+            className="w-16 h-16 text-slate-600 mx-auto mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
           </svg>
           <p className="text-slate-400">Aucun commentaire trouvé</p>
         </div>
@@ -120,28 +144,28 @@ export default function AdminCommentsPage() {
                   {comment.author.avatar ? (
                     <img
                       src={comment.author.avatar}
-                      alt={comment.author.name || 'User'}
+                      alt={comment.author.name || "User"}
                       className="w-10 h-10 rounded-full"
                     />
                   ) : (
                     <div className="w-10 h-10 bg-violet-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {(comment.author.name || 'U')[0].toUpperCase()}
+                      {(comment.author.name || "U")[0].toUpperCase()}
                     </div>
                   )}
                   <div>
                     <div className="flex items-center space-x-2">
                       <span className="text-white font-medium">
-                        {comment.author.name || 'Utilisateur'}
+                        {comment.author.name || "Utilisateur"}
                       </span>
                       {getStatusBadge(comment.status)}
                     </div>
                     <p className="text-sm text-slate-400">
-                      {new Date(comment.createdAt).toLocaleDateString('fr-FR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(comment.createdAt).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </p>
                   </div>
@@ -157,39 +181,51 @@ export default function AdminCommentsPage() {
                     className="text-sm text-violet-400 hover:text-violet-300 flex items-center space-x-1"
                   >
                     <span>Sur l'article: {comment.post.title}</span>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
                     </svg>
                   </Link>
                 </div>
               )}
 
               {/* Content */}
-              <p className="text-slate-300 mb-4 whitespace-pre-wrap">{comment.content}</p>
+              <p className="text-slate-300 mb-4 whitespace-pre-wrap">
+                {comment.content}
+              </p>
 
               {/* Actions */}
               <div className="flex items-center space-x-2">
-                {comment.status !== 'APPROVED' && (
+                {comment.status !== "APPROVED" && (
                   <button
-                    onClick={() => handleAction(comment.id, 'approve')}
+                    onClick={() => handleAction(comment.id, "approve")}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                   >
                     ✓ Approuver
                   </button>
                 )}
-                
-                {comment.status !== 'REJECTED' && (
+
+                {comment.status !== "REJECTED" && (
                   <button
-                    onClick={() => handleAction(comment.id, 'reject')}
+                    onClick={() => handleAction(comment.id, "reject")}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                   >
                     ✗ Rejeter
                   </button>
                 )}
-                
-                {comment.status !== 'SPAM' && (
+
+                {comment.status !== "SPAM" && (
                   <button
-                    onClick={() => handleAction(comment.id, 'spam')}
+                    onClick={() => handleAction(comment.id, "spam")}
                     className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
                   >
                     ⚠ Spam
@@ -197,7 +233,7 @@ export default function AdminCommentsPage() {
                 )}
 
                 <button
-                  onClick={() => handleAction(comment.id, 'delete')}
+                  onClick={() => handleAction(comment.id, "delete")}
                   className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors text-sm"
                 >
                   🗑 Supprimer

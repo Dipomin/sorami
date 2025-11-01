@@ -3,7 +3,7 @@
  * Composant pour gérer toutes les balises SEO (Open Graph, Twitter Cards, JSON-LD)
  */
 
-import Head from 'next/head';
+import Head from "next/head";
 
 interface SEOMetaProps {
   title: string;
@@ -12,7 +12,7 @@ interface SEOMetaProps {
   author?: string;
   image?: string;
   url?: string;
-  type?: 'website' | 'article';
+  type?: "website" | "article";
   publishedTime?: string;
   modifiedTime?: string;
   section?: string;
@@ -26,41 +26,46 @@ export function SEOMeta({
   author,
   image,
   url,
-  type = 'website',
+  type = "website",
   publishedTime,
   modifiedTime,
   section,
   tags,
 }: SEOMetaProps) {
   const fullTitle = `${title} | Sorami`;
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sorami.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sorami.app";
   const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
   const defaultImage = `${siteUrl}/og-default.png`;
   const ogImage = image || defaultImage;
 
   // JSON-LD structured data pour les articles
-  const articleSchema = type === 'article' ? {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: title,
-    description,
-    image: ogImage,
-    datePublished: publishedTime,
-    dateModified: modifiedTime || publishedTime,
-    author: author ? {
-      '@type': 'Person',
-      name: author,
-    } : undefined,
-    publisher: {
-      '@type': 'Organization',
-      name: 'Sorami',
-      logo: {
-        '@type': 'ImageObject',
-        url: `${siteUrl}/logo.png`,
-      },
-    },
-    keywords: keywords || tags?.join(', '),
-  } : null;
+  const articleSchema =
+    type === "article"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: title,
+          description,
+          image: ogImage,
+          datePublished: publishedTime,
+          dateModified: modifiedTime || publishedTime,
+          author: author
+            ? {
+                "@type": "Person",
+                name: author,
+              }
+            : undefined,
+          publisher: {
+            "@type": "Organization",
+            name: "Sorami",
+            logo: {
+              "@type": "ImageObject",
+              url: `${siteUrl}/logo.png`,
+            },
+          },
+          keywords: keywords || tags?.join(", "),
+        }
+      : null;
 
   return (
     <Head>
@@ -83,11 +88,15 @@ export function SEOMeta({
       <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="Sorami" />
       <meta property="og:locale" content="fr_FR" />
-      
-      {type === 'article' && (
+
+      {type === "article" && (
         <>
-          {publishedTime && <meta property="article:published_time" content={publishedTime} />}
-          {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+          {publishedTime && (
+            <meta property="article:published_time" content={publishedTime} />
+          )}
+          {modifiedTime && (
+            <meta property="article:modified_time" content={modifiedTime} />
+          )}
           {author && <meta property="article:author" content={author} />}
           {section && <meta property="article:section" content={section} />}
           {tags?.map((tag) => (
@@ -130,7 +139,7 @@ export function generateBlogMetadata({
   section,
   tags,
 }: SEOMetaProps) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sorami.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sorami.app";
   const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
   const defaultImage = `${siteUrl}/og-default.png`;
   const ogImage = image || defaultImage;
@@ -138,10 +147,10 @@ export function generateBlogMetadata({
   return {
     title: `${title} | Sorami`,
     description,
-    keywords: keywords || tags?.join(', '),
+    keywords: keywords || tags?.join(", "),
     authors: author ? [{ name: author }] : undefined,
     openGraph: {
-      type: 'article',
+      type: "article",
       title,
       description,
       url: fullUrl,
@@ -153,16 +162,16 @@ export function generateBlogMetadata({
           alt: title,
         },
       ],
-      siteName: 'Sorami',
-      locale: 'fr_FR',
+      siteName: "Sorami",
+      locale: "fr_FR",
       publishedTime,
       modifiedTime: modifiedTime || publishedTime,
       section,
       tags,
     },
     twitter: {
-      card: 'summary_large_image',
-      site: '@sorami_app',
+      card: "summary_large_image",
+      site: "@sorami_app",
       title,
       description,
       images: [ogImage],
@@ -177,9 +186,9 @@ export function generateBlogMetadata({
       googleBot: {
         index: true,
         follow: true,
-        'max-video-preview': -1,
-        'max-image-preview': 'large',
-        'max-snippet': -1,
+        "max-video-preview": -1,
+        "max-image-preview": "large",
+        "max-snippet": -1,
       },
     },
   };
