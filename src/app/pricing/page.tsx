@@ -38,6 +38,7 @@ export default function PricingPage() {
   const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(
     null
   );
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
 
   // Mapping des intervalles pour l'affichage en français
   const intervalLabels: Record<string, string> = {
@@ -77,13 +78,14 @@ export default function PricingPage() {
         throw new Error("Erreur lors du chargement des plans");
       }
       const plansData = await plansResponse.json();
-      
+
       // Filtrer pour ne garder que nos 2 plans de production
-      const productionPlans = (plansData.plans || []).filter((plan: Plan) => 
-        plan.paystackId === 'PLN_dbrclylu9lqaraa' || // STANDARD
-        plan.paystackId === 'PLN_grjhlpleqbx9hyc'    // CRÉATEUR
+      const productionPlans = (plansData.plans || []).filter(
+        (plan: Plan) =>
+          plan.paystackId === "PLN_dbrclylu9lqaraa" || // STANDARD
+          plan.paystackId === "PLN_grjhlpleqbx9hyc" // CRÉATEUR
       );
-      
+
       setPlans(productionPlans);
 
       // Charger l'abonnement actuel
@@ -118,14 +120,17 @@ export default function PricingPage() {
         return;
       }
 
-      // Initialiser l'abonnement
+      // Initialiser l'abonnement avec le cycle de facturation
       const response = await fetch("/api/subscriptions/initialize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ 
+          planId,
+          billingCycle 
+        }),
       });
 
       if (!response.ok) {
@@ -174,10 +179,37 @@ export default function PricingPage() {
               abonnement
             </span>
           </h1>
-          <p className="text-lg text-dark-400 max-w-2xl mx-auto">
+          <p className="text-lg text-dark-400 max-w-2xl mx-auto mb-8">
             Accédez à toutes les fonctionnalités de Sorami et créez du contenu
             illimité avec l'IA
           </p>
+
+          {/* Toggle Mensuel/Annuel */}
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
+                billingCycle === 'monthly'
+                  ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
+                  : 'bg-dark-800/50 text-dark-400 hover:text-white'
+              }`}
+            >
+              Mensuel
+            </button>
+            <button
+              onClick={() => setBillingCycle('annually')}
+              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 relative ${
+                billingCycle === 'annually'
+                  ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
+                  : 'bg-dark-800/50 text-dark-400 hover:text-white'
+              }`}
+            >
+              Annuel
+              <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                -20%
+              </span>
+            </button>
+          </div>
         </motion.div>
 
         {/* Abonnement actuel */}
@@ -217,31 +249,43 @@ export default function PricingPage() {
             const gradient = gradients[index % gradients.length];
             const isCurrentPlan = currentSubscription?.plan.id === plan.id;
             const isSubscribing = subscribingPlanId === plan.id;
-            
+
+            // Calcul du prix selon le cycle de facturation
+            const isAnnual = billingCycle === 'annually';
+            const displayAmount = isAnnual 
+              ? Math.round((plan.amount / 100) * 12 * 0.8) // 20% de réduction annuelle
+              : plan.amount / 100;
+            const monthlyEquivalent = isAnnual 
+              ? Math.round(displayAmount / 12)
+              : null;
+
             // Détails spécifiques par plan
-            const planDetails = plan.paystackId === 'PLN_dbrclylu9lqaraa' ? {
-              features: [
-                "3 500 crédits par mois",
-                "100 images haute qualité",
-                "10 articles de blog optimisés SEO",
-                "3 vidéos HD",
-                "Stockage cloud sécurisé",
-                "Support prioritaire"
-              ],
-              badge: null
-            } : {
-              features: [
-                "8 000 crédits par mois",
-                "700 images premium",
-                "50 articles de blog professionnels",
-                "10 vidéos HD personnalisées",
-                "5 ebooks complets",
-                "API complète",
-                "Support dédié 24/7",
-                "Analytiques avancées"
-              ],
-              badge: "🔥 POPULAIRE"
-            };
+            const planDetails =
+              plan.paystackId === "PLN_dbrclylu9lqaraa"
+                ? {
+                    features: [
+                      "3 500 crédits par mois",
+                      "100 images haute qualité",
+                      "10 articles de blog optimisés SEO",
+                      "3 vidéos HD",
+                      "Stockage cloud sécurisé",
+                      "Support prioritaire",
+                    ],
+                    badge: null,
+                  }
+                : {
+                    features: [
+                      "8 000 crédits par mois",
+                      "700 images premium",
+                      "50 articles de blog professionnels",
+                      "10 vidéos HD personnalisées",
+                      "5 ebooks complets",
+                      "API complète",
+                      "Support dédié 24/7",
+                      "Analytiques avancées",
+                    ],
+                    badge: "🔥 POPULAIRE",
+                  };
 
             return (
               <motion.div
@@ -250,11 +294,11 @@ export default function PricingPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 className={`relative p-8 bg-dark-900/50 backdrop-blur-xl rounded-2xl border-2 ${
-                  isCurrentPlan 
-                    ? "border-green-500/50" 
-                    : planDetails.badge 
-                      ? "border-primary-500/50"
-                      : "border-dark-800/50"
+                  isCurrentPlan
+                    ? "border-green-500/50"
+                    : planDetails.badge
+                    ? "border-primary-500/50"
+                    : "border-dark-800/50"
                 } hover:border-primary-500/50 transition-all duration-300 ${
                   planDetails.badge ? "scale-105" : ""
                 }`}
@@ -267,7 +311,7 @@ export default function PricingPage() {
                     </span>
                   </div>
                 )}
-                
+
                 {isCurrentPlan && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                     <span className="px-4 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">
@@ -292,13 +336,29 @@ export default function PricingPage() {
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
                     <span className="text-5xl font-bold text-white">
-                      {(plan.amount / 100).toLocaleString()}
+                      {displayAmount.toLocaleString()}
                     </span>
                     <span className="text-xl text-dark-400">F CFA</span>
                   </div>
                   <p className="text-dark-400 text-sm mt-2">
-                    par {intervalLabels[plan.interval] || plan.interval}
+                    {isAnnual ? (
+                      <>
+                        par an{' '}
+                        <span className="text-green-400 font-semibold">
+                          (soit {monthlyEquivalent?.toLocaleString()} F/mois)
+                        </span>
+                      </>
+                    ) : (
+                      `par ${intervalLabels[plan.interval] || plan.interval}`
+                    )}
                   </p>
+                  {isAnnual && (
+                    <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
+                      <span className="text-green-400 text-xs font-semibold">
+                        ✨ Économisez 20% avec le paiement annuel
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Features */}

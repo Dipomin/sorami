@@ -117,7 +117,32 @@ const pricingPlans = [
   },
 ];
 
+'use client';
+
+import { useState } from 'react';
+
 const HomePage = () => {
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
+
+  // Calculer les prix selon le cycle de facturation
+  const getPlanPrice = (basePrice: string) => {
+    const numericPrice = parseInt(basePrice.replace(/\D/g, ''));
+    if (billingCycle === 'annually') {
+      const annualPrice = Math.round(numericPrice * 12 * 0.8);
+      const monthlyEquivalent = Math.round(annualPrice / 12);
+      return {
+        display: `${annualPrice.toLocaleString()} F`,
+        period: '/ an',
+        monthlyEquivalent: `${monthlyEquivalent.toLocaleString()} F/mois`,
+      };
+    }
+    return {
+      display: basePrice,
+      period: '/ mois',
+      monthlyEquivalent: null,
+    };
+  };
+
   return (
     <div className="min-h-screen bg-gradient-dark">
       {/* Hero Section */}
@@ -325,9 +350,36 @@ const HomePage = () => {
             <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
               Des tarifs adaptés à vos besoins
             </h2>
-            <p className="text-xl text-dark-300 mb-2">
+            <p className="text-xl text-dark-300 mb-8">
               Commencez gratuitement — changez quand vous voulez
             </p>
+
+            {/* Toggle Mensuel/Annuel */}
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
+                  billingCycle === 'monthly'
+                    ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-dark-800/50 text-dark-400 hover:text-white'
+                }`}
+              >
+                Mensuel
+              </button>
+              <button
+                onClick={() => setBillingCycle('annually')}
+                className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 relative ${
+                  billingCycle === 'annually'
+                    ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
+                    : 'bg-dark-800/50 text-dark-400 hover:text-white'
+                }`}
+              >
+                Annuel
+                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                  -20%
+                </span>
+              </button>
+            </div>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -355,12 +407,26 @@ const HomePage = () => {
                     {plan.name}
                   </h3>
                   <p className="text-dark-300 mb-4">{plan.description}</p>
-                  <div className="flex items-baseline">
+                  <div className="flex items-baseline mb-2">
                     <span className="text-4xl font-bold text-white">
-                      {plan.price}
+                      {plan.paystackPlanCode ? getPlanPrice(plan.price).display : plan.price}
                     </span>
-                    <span className="text-dark-400 ml-2">{plan.period}</span>
+                    <span className="text-dark-400 ml-2">
+                      {plan.paystackPlanCode ? getPlanPrice(plan.price).period : plan.period}
+                    </span>
                   </div>
+                  {plan.paystackPlanCode && billingCycle === 'annually' && (
+                    <p className="text-green-400 text-sm font-semibold">
+                      soit {getPlanPrice(plan.price).monthlyEquivalent}
+                    </p>
+                  )}
+                  {plan.paystackPlanCode && billingCycle === 'annually' && (
+                    <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
+                      <span className="text-green-400 text-xs font-semibold">
+                        ✨ Économisez 20%
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <ul className="space-y-3 mb-8">

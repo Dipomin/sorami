@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Récupérer le plan sélectionné
+    // 3. Récupérer le plan sélectionné et le cycle de facturation
     const body = await request.json();
-    const { planId } = body;
+    const { planId, billingCycle = 'monthly' } = body;
 
     if (!planId) {
       return NextResponse.json(
@@ -69,6 +69,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Calculer le montant selon le cycle de facturation
+    // Si annuel : 12 mois avec 20% de réduction
+    const finalAmount = billingCycle === 'annually' 
+      ? Math.round(plan.amount * 12 * 0.8)
+      : plan.amount;
+
     // 4. Vérifier qu'il n'y a pas déjà un abonnement actif
     const existingSubscription = await prisma.paystackSubscription.findFirst({
       where: {
@@ -86,25 +92,35 @@ export async function POST(request: NextRequest) {
 
     // 5. Initialiser une transaction avec le plan (pas un abonnement direct)
     // Paystack créera l'abonnement automatiquement après le premier paiement
+    // Note: Pour un paiement annuel, on n'utilise PAS le plan Paystack (qui est mensuel)
+    // mais on fait un paiement unique du montant annuel
+    const transactionData: any = {
+      email: user.email,
+      amount: finalAmount * 100, // Convertir en kobo/centimes
+      callback_url: `${APP_URL}/paystack/callback`,
+      metadata: {
+        userId: user.id,
+        planId: plan.id,
+        type: 'subscription',
+        billingCycle,
+        cancel_action: `${APP_URL}/pricing`,
+      },
+      channels: ['card'], // Seulement carte pour les abonnements
+    };
+
+    // Si mensuel, on utilise le plan Paystack pour un abonnement récurrent
+    // Si annuel, on fait un paiement unique (pas d'abonnement récurrent Paystack)
+    if (billingCycle === 'monthly') {
+      transactionData.plan = plan.paystackId;
+    }
+
     const initResponse = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SECRET}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        email: user.email,
-        amount: plan.amount * 100, // Convertir en kobo/centimes
-        plan: plan.paystackId, // Ceci indique à Paystack de créer un abonnement
-        callback_url: `${APP_URL}/paystack/callback`,
-        metadata: {
-          userId: user.id,
-          planId: plan.id,
-          type: 'subscription',
-          cancel_action: `${APP_URL}/pricing`,
-        },
-        channels: ['card'], // Seulement carte pour les abonnements
-      }),
+      body: JSON.stringify(transactionData),
     });
 
     if (!initResponse.ok) {
