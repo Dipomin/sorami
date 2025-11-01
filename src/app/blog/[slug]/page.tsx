@@ -11,6 +11,7 @@ import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { useBlogComments } from '@/hooks/useBlogComments';
 import { motion } from 'framer-motion';
+import { generateArticleJsonLd } from '@/lib/blog-metadata';
 
 interface BlogPost {
   id: string;
@@ -130,9 +131,28 @@ export default function BlogPostPage() {
 
   const tags = post.tags ? (typeof post.tags === 'string' ? JSON.parse(post.tags) : post.tags) : [];
 
+  // JSON-LD Schema pour SEO
+  const jsonLd = generateArticleJsonLd({
+    title: post.title,
+    description: post.excerpt || post.content.substring(0, 160),
+    image: post.coverImage,
+    url: `/blog/${post.slug}`,
+    publishedTime: post.publishedAt,
+    modifiedTime: post.updatedAt,
+    author: post.author.name || undefined,
+    tags,
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-      {/* Header */}
+    <>
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        {/* Header */}
       <header className="border-b border-slate-800 sticky top-0 bg-slate-950/80 backdrop-blur-sm z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -414,5 +434,6 @@ export default function BlogPostPage() {
         </div>
       </footer>
     </div>
+    </>
   );
 }
