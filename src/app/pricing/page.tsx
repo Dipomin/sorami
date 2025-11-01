@@ -38,7 +38,9 @@ export default function PricingPage() {
   const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(
     null
   );
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">(
+    "monthly"
+  );
 
   // Mapping des intervalles pour l'affichage en français
   const intervalLabels: Record<string, string> = {
@@ -127,9 +129,9 @@ export default function PricingPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           planId,
-          billingCycle 
+          billingCycle,
         }),
       });
 
@@ -187,21 +189,21 @@ export default function PricingPage() {
           {/* Toggle Mensuel/Annuel */}
           <div className="flex items-center justify-center gap-4">
             <button
-              onClick={() => setBillingCycle('monthly')}
+              onClick={() => setBillingCycle("monthly")}
               className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
-                billingCycle === 'monthly'
-                  ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
-                  : 'bg-dark-800/50 text-dark-400 hover:text-white'
+                billingCycle === "monthly"
+                  ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
+                  : "bg-dark-800/50 text-dark-400 hover:text-white"
               }`}
             >
               Mensuel
             </button>
             <button
-              onClick={() => setBillingCycle('annually')}
+              onClick={() => setBillingCycle("annually")}
               className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 relative ${
-                billingCycle === 'annually'
-                  ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
-                  : 'bg-dark-800/50 text-dark-400 hover:text-white'
+                billingCycle === "annually"
+                  ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
+                  : "bg-dark-800/50 text-dark-400 hover:text-white"
               }`}
             >
               Annuel
@@ -251,11 +253,11 @@ export default function PricingPage() {
             const isSubscribing = subscribingPlanId === plan.id;
 
             // Calcul du prix selon le cycle de facturation
-            const isAnnual = billingCycle === 'annually';
-            const displayAmount = isAnnual 
+            const isAnnual = billingCycle === "annually";
+            const displayAmount = isAnnual
               ? Math.round((plan.amount / 100) * 12 * 0.8) // 20% de réduction annuelle
               : plan.amount / 100;
-            const monthlyEquivalent = isAnnual 
+            const monthlyEquivalent = isAnnual
               ? Math.round(displayAmount / 12)
               : null;
 
@@ -343,7 +345,7 @@ export default function PricingPage() {
                   <p className="text-dark-400 text-sm mt-2">
                     {isAnnual ? (
                       <>
-                        par an{' '}
+                        par an{" "}
                         <span className="text-green-400 font-semibold">
                           (soit {monthlyEquivalent?.toLocaleString()} F/mois)
                         </span>

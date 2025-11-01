@@ -15,6 +15,8 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+
 
 const features = [
   {
@@ -117,28 +119,27 @@ const pricingPlans = [
   },
 ];
 
-'use client';
-
-import { useState } from 'react';
 
 const HomePage = () => {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annually'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">(
+    "monthly"
+  );
 
   // Calculer les prix selon le cycle de facturation
   const getPlanPrice = (basePrice: string) => {
-    const numericPrice = parseInt(basePrice.replace(/\D/g, ''));
-    if (billingCycle === 'annually') {
+    const numericPrice = parseInt(basePrice.replace(/\D/g, ""));
+    if (billingCycle === "annually") {
       const annualPrice = Math.round(numericPrice * 12 * 0.8);
       const monthlyEquivalent = Math.round(annualPrice / 12);
       return {
         display: `${annualPrice.toLocaleString()} F`,
-        period: '/ an',
+        period: "/ an",
         monthlyEquivalent: `${monthlyEquivalent.toLocaleString()} F/mois`,
       };
     }
     return {
       display: basePrice,
-      period: '/ mois',
+      period: "/ mois",
       monthlyEquivalent: null,
     };
   };
@@ -357,21 +358,21 @@ const HomePage = () => {
             {/* Toggle Mensuel/Annuel */}
             <div className="flex items-center justify-center gap-4">
               <button
-                onClick={() => setBillingCycle('monthly')}
+                onClick={() => setBillingCycle("monthly")}
                 className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
-                  billingCycle === 'monthly'
-                    ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-dark-800/50 text-dark-400 hover:text-white'
+                  billingCycle === "monthly"
+                    ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
+                    : "bg-dark-800/50 text-dark-400 hover:text-white"
                 }`}
               >
                 Mensuel
               </button>
               <button
-                onClick={() => setBillingCycle('annually')}
+                onClick={() => setBillingCycle("annually")}
                 className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 relative ${
-                  billingCycle === 'annually'
-                    ? 'bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg'
-                    : 'bg-dark-800/50 text-dark-400 hover:text-white'
+                  billingCycle === "annually"
+                    ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
+                    : "bg-dark-800/50 text-dark-400 hover:text-white"
                 }`}
               >
                 Annuel
@@ -409,18 +410,22 @@ const HomePage = () => {
                   <p className="text-dark-300 mb-4">{plan.description}</p>
                   <div className="flex items-baseline mb-2">
                     <span className="text-4xl font-bold text-white">
-                      {plan.paystackPlanCode ? getPlanPrice(plan.price).display : plan.price}
+                      {plan.paystackPlanCode
+                        ? getPlanPrice(plan.price).display
+                        : plan.price}
                     </span>
                     <span className="text-dark-400 ml-2">
-                      {plan.paystackPlanCode ? getPlanPrice(plan.price).period : plan.period}
+                      {plan.paystackPlanCode
+                        ? getPlanPrice(plan.price).period
+                        : plan.period}
                     </span>
                   </div>
-                  {plan.paystackPlanCode && billingCycle === 'annually' && (
+                  {plan.paystackPlanCode && billingCycle === "annually" && (
                     <p className="text-green-400 text-sm font-semibold">
                       soit {getPlanPrice(plan.price).monthlyEquivalent}
                     </p>
                   )}
-                  {plan.paystackPlanCode && billingCycle === 'annually' && (
+                  {plan.paystackPlanCode && billingCycle === "annually" && (
                     <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
                       <span className="text-green-400 text-xs font-semibold">
                         ✨ Économisez 20%

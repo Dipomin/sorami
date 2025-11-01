@@ -3,26 +3,26 @@
 import { useState, useEffect, Suspense } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { 
-  RefreshCw, 
-  Download, 
-  AlertCircle, 
-  Info, 
+import {
+  RefreshCw,
+  Download,
+  AlertCircle,
+  Info,
   AlertTriangle,
   Terminal,
   Server,
-  Activity
+  Activity,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-type LogType = 'pm2' | 'nginx' | 'system' | 'all';
-type LogLevel = 'all' | 'error' | 'warn' | 'info';
+type LogType = "pm2" | "nginx" | "system" | "all";
+type LogLevel = "all" | "error" | "warn" | "info";
 
 function LogsContent() {
-  const [logs, setLogs] = useState<string>('');
+  const [logs, setLogs] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [type, setType] = useState<LogType>('pm2');
-  const [level, setLevel] = useState<LogLevel>('all');
+  const [type, setType] = useState<LogType>("pm2");
+  const [level, setLevel] = useState<LogLevel>("all");
   const [lines, setLines] = useState(100);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -34,12 +34,12 @@ function LogsContent() {
         `/api/admin/logs?type=${type}&lines=${lines}&level=${level}`
       );
       const data = await response.json();
-      
+
       if (data.success) {
         setLogs(data.logs);
         setLastUpdate(new Date(data.timestamp));
       } else {
-        setLogs(`Erreur: ${data.error}\n${data.details || ''}`);
+        setLogs(`Erreur: ${data.error}\n${data.details || ""}`);
       }
     } catch (error: any) {
       setLogs(`Erreur réseau: ${error.message}`);
@@ -54,18 +54,18 @@ function LogsContent() {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    
+
     const interval = setInterval(() => {
       fetchLogs();
     }, 5000); // Rafraîchir toutes les 5 secondes
-    
+
     return () => clearInterval(interval);
   }, [autoRefresh, type, level, lines]);
 
   const downloadLogs = () => {
-    const blob = new Blob([logs], { type: 'text/plain' });
+    const blob = new Blob([logs], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `sorami-logs-${type}-${new Date().toISOString()}.txt`;
     document.body.appendChild(a);
@@ -76,19 +76,27 @@ function LogsContent() {
 
   const getLogTypeIcon = (logType: LogType) => {
     switch (logType) {
-      case 'pm2': return <Terminal className="w-4 h-4" />;
-      case 'nginx': return <Server className="w-4 h-4" />;
-      case 'system': return <Activity className="w-4 h-4" />;
-      default: return <Terminal className="w-4 h-4" />;
+      case "pm2":
+        return <Terminal className="w-4 h-4" />;
+      case "nginx":
+        return <Server className="w-4 h-4" />;
+      case "system":
+        return <Activity className="w-4 h-4" />;
+      default:
+        return <Terminal className="w-4 h-4" />;
     }
   };
 
   const getLevelIcon = (logLevel: LogLevel) => {
     switch (logLevel) {
-      case 'error': return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'warn': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      case 'info': return <Info className="w-4 h-4 text-blue-500" />;
-      default: return <Terminal className="w-4 h-4" />;
+      case "error":
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      case "warn":
+        return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+      case "info":
+        return <Info className="w-4 h-4 text-blue-500" />;
+      default:
+        return <Terminal className="w-4 h-4" />;
     }
   };
 
@@ -122,14 +130,14 @@ function LogsContent() {
                 Source
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {(['pm2', 'nginx', 'system', 'all'] as LogType[]).map((t) => (
+                {(["pm2", "nginx", "system", "all"] as LogType[]).map((t) => (
                   <button
                     key={t}
                     onClick={() => setType(t)}
                     className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all ${
                       type === t
-                        ? 'bg-violet-600 text-white'
-                        : 'bg-dark-800/50 text-dark-300 hover:bg-dark-800'
+                        ? "bg-violet-600 text-white"
+                        : "bg-dark-800/50 text-dark-300 hover:bg-dark-800"
                     }`}
                   >
                     {getLogTypeIcon(t)}
@@ -145,14 +153,14 @@ function LogsContent() {
                 Niveau
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {(['all', 'error', 'warn', 'info'] as LogLevel[]).map((l) => (
+                {(["all", "error", "warn", "info"] as LogLevel[]).map((l) => (
                   <button
                     key={l}
                     onClick={() => setLevel(l)}
                     className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all ${
                       level === l
-                        ? 'bg-violet-600 text-white'
-                        : 'bg-dark-800/50 text-dark-300 hover:bg-dark-800'
+                        ? "bg-violet-600 text-white"
+                        : "bg-dark-800/50 text-dark-300 hover:bg-dark-800"
                     }`}
                   >
                     {getLevelIcon(l)}
@@ -192,7 +200,9 @@ function LogsContent() {
                   size="sm"
                   className="w-full"
                 >
-                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+                  />
                   Rafraîchir
                 </Button>
                 <Button
@@ -221,10 +231,10 @@ function LogsContent() {
                 Rafraîchissement automatique (5s)
               </span>
             </label>
-            
+
             {lastUpdate && (
               <span className="text-xs text-dark-500 ml-auto">
-                Dernière mise à jour : {lastUpdate.toLocaleTimeString('fr-FR')}
+                Dernière mise à jour : {lastUpdate.toLocaleTimeString("fr-FR")}
               </span>
             )}
           </div>
@@ -241,10 +251,10 @@ function LogsContent() {
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               {getLogTypeIcon(type)}
               Logs {type.toUpperCase()}
-              {level !== 'all' && ` - ${level.toUpperCase()}`}
+              {level !== "all" && ` - ${level.toUpperCase()}`}
             </h2>
             <span className="text-xs text-dark-500">
-              {logs.split('\n').length} lignes
+              {logs.split("\n").length} lignes
             </span>
           </div>
 
@@ -253,7 +263,9 @@ function LogsContent() {
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <RefreshCw className="w-6 h-6 animate-spin text-violet-500" />
-                  <span className="ml-2 text-dark-400">Chargement des logs...</span>
+                  <span className="ml-2 text-dark-400">
+                    Chargement des logs...
+                  </span>
                 </div>
               ) : logs ? (
                 logs
@@ -278,10 +290,17 @@ function LogsContent() {
             <div className="text-sm text-blue-300">
               <p className="font-medium mb-1">💡 Astuce</p>
               <ul className="list-disc list-inside space-y-1 text-blue-300/80">
-                <li>Activez le rafraîchissement automatique pour surveiller en temps réel</li>
-                <li>Filtrez par niveau pour ne voir que les erreurs ou warnings</li>
+                <li>
+                  Activez le rafraîchissement automatique pour surveiller en
+                  temps réel
+                </li>
+                <li>
+                  Filtrez par niveau pour ne voir que les erreurs ou warnings
+                </li>
                 <li>Téléchargez les logs pour analyse hors ligne</li>
-                <li>Les logs Nginx nécessitent des permissions sudo sur le serveur</li>
+                <li>
+                  Les logs Nginx nécessitent des permissions sudo sur le serveur
+                </li>
               </ul>
             </div>
           </div>
@@ -293,13 +312,15 @@ function LogsContent() {
 
 export default function LogsPage() {
   return (
-    <Suspense fallback={
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
-        </div>
-      </DashboardLayout>
-    }>
+    <Suspense
+      fallback={
+        <DashboardLayout>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
+          </div>
+        </DashboardLayout>
+      }
+    >
       <LogsContent />
     </Suspense>
   );
