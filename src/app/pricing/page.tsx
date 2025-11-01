@@ -71,13 +71,20 @@ export default function PricingPage() {
       setLoading(true);
       setError(null);
 
-      // Charger les plans
+      // Charger les plans depuis Paystack
       const plansResponse = await fetch("/api/plans");
       if (!plansResponse.ok) {
         throw new Error("Erreur lors du chargement des plans");
       }
       const plansData = await plansResponse.json();
-      setPlans(plansData.plans || []);
+      
+      // Filtrer pour ne garder que nos 2 plans de production
+      const productionPlans = (plansData.plans || []).filter((plan: Plan) => 
+        plan.paystackId === 'PLN_dbrclylu9lqaraa' || // STANDARD
+        plan.paystackId === 'PLN_grjhlpleqbx9hyc'    // CRÉATEUR
+      );
+      
+      setPlans(productionPlans);
 
       // Charger l'abonnement actuel
       const token = await getToken();
@@ -204,12 +211,37 @@ export default function PricingPage() {
         )}
 
         {/* Plans */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {plans.map((plan, index) => {
             const Icon = getPlanIcon(index);
             const gradient = gradients[index % gradients.length];
             const isCurrentPlan = currentSubscription?.plan.id === plan.id;
             const isSubscribing = subscribingPlanId === plan.id;
+            
+            // Détails spécifiques par plan
+            const planDetails = plan.paystackId === 'PLN_dbrclylu9lqaraa' ? {
+              features: [
+                "3 500 crédits par mois",
+                "100 images haute qualité",
+                "10 articles de blog optimisés SEO",
+                "3 vidéos HD",
+                "Stockage cloud sécurisé",
+                "Support prioritaire"
+              ],
+              badge: null
+            } : {
+              features: [
+                "8 000 crédits par mois",
+                "700 images premium",
+                "50 articles de blog professionnels",
+                "10 vidéos HD personnalisées",
+                "5 ebooks complets",
+                "API complète",
+                "Support dédié 24/7",
+                "Analytiques avancées"
+              ],
+              badge: "🔥 POPULAIRE"
+            };
 
             return (
               <motion.div
@@ -217,70 +249,88 @@ export default function PricingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`relative p-6 bg-dark-900/50 backdrop-blur-xl rounded-2xl border ${
-                  isCurrentPlan ? "border-green-500/50" : "border-dark-800/50"
-                } hover:border-primary-500/50 transition-all duration-300`}
+                className={`relative p-8 bg-dark-900/50 backdrop-blur-xl rounded-2xl border-2 ${
+                  isCurrentPlan 
+                    ? "border-green-500/50" 
+                    : planDetails.badge 
+                      ? "border-primary-500/50"
+                      : "border-dark-800/50"
+                } hover:border-primary-500/50 transition-all duration-300 ${
+                  planDetails.badge ? "scale-105" : ""
+                }`}
               >
-                {/* Badge abonnement actif */}
+                {/* Badge populaire ou actif */}
+                {planDetails.badge && !isCurrentPlan && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1.5 bg-gradient-to-r from-primary-500 to-pink-500 text-white text-sm font-bold rounded-full shadow-lg">
+                      {planDetails.badge}
+                    </span>
+                  </div>
+                )}
+                
                 {isCurrentPlan && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 bg-green-500 text-white text-xs font-semibold rounded-full">
-                      Actif
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">
+                      ✓ ACTIF
                     </span>
                   </div>
                 )}
 
                 {/* Icône */}
                 <div
-                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-4`}
+                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-6`}
                 >
-                  <Icon className="w-6 h-6 text-white" />
+                  <Icon className="w-7 h-7 text-white" />
                 </div>
 
                 {/* Nom du plan */}
-                <h3 className="text-2xl font-bold text-white mb-2">
+                <h3 className="text-3xl font-bold text-white mb-3">
                   {plan.name}
                 </h3>
-
-                {/* Description */}
-                {plan.description && (
-                  <p className="text-dark-400 text-sm mb-4">
-                    {plan.description}
-                  </p>
-                )}
 
                 {/* Prix */}
                 <div className="mb-6">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-white">
-                      {plan.amount.toLocaleString()}
+                    <span className="text-5xl font-bold text-white">
+                      {(plan.amount / 100).toLocaleString()}
                     </span>
-                    <span className="text-dark-400">{plan.currency}</span>
+                    <span className="text-xl text-dark-400">F CFA</span>
                   </div>
-                  <p className="text-dark-400 text-sm mt-1">
+                  <p className="text-dark-400 text-sm mt-2">
                     par {intervalLabels[plan.interval] || plan.interval}
                   </p>
+                </div>
+
+                {/* Features */}
+                <div className="space-y-3 mb-8">
+                  {planDetails.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                      <span className="text-dark-300 text-sm">{feature}</span>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Bouton d'action */}
                 <Button
                   onClick={() => handleSubscribe(plan.id)}
                   disabled={isCurrentPlan || isSubscribing}
+                  size="lg"
                   className={`w-full ${
                     isCurrentPlan
                       ? "bg-dark-800 cursor-not-allowed"
-                      : `bg-gradient-to-r ${gradient} hover:opacity-90`
+                      : `bg-gradient-to-r ${gradient} hover:opacity-90 shadow-lg`
                   }`}
                 >
                   {isSubscribing ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                       Traitement...
                     </>
                   ) : isCurrentPlan ? (
                     "Plan actuel"
                   ) : (
-                    "Souscrire"
+                    `Souscrire ${plan.name}`
                   )}
                 </Button>
               </motion.div>
