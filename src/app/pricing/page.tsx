@@ -81,17 +81,14 @@ export default function PricingPage() {
       }
       const plansData = await plansResponse.json();
 
-      // Filtrer pour ne garder que nos plans de production selon le cycle de facturation
-      const productionPlanIds =
-        billingCycle === "monthly"
-          ? ["PLN_dbrclylu9lqaraa", "PLN_grjhlpleqbx9hyc"] // Plans mensuels
-          : ["PLN_99h6qfha7ira9p8", "PLN_gvaroq26yvdra7e"]; // Plans annuels
-
-      const productionPlans = (plansData.plans || []).filter((plan: Plan) =>
-        productionPlanIds.includes(plan.paystackId)
+      // Filtrer les plans selon le cycle de facturation (interval)
+      const targetInterval = billingCycle === "monthly" ? "monthly" : "annually";
+      
+      const filteredPlans = (plansData.plans || []).filter((plan: Plan) => 
+        plan.interval === targetInterval
       );
 
-      setPlans(productionPlans);
+      setPlans(filteredPlans);
 
       // Charger l'abonnement actuel
       const token = await getToken();
@@ -255,17 +252,17 @@ export default function PricingPage() {
             const isCurrentPlan = currentSubscription?.plan.id === plan.id;
             const isSubscribing = subscribingPlanId === plan.id;
 
-            // Affichage du prix direct depuis le plan (les plans annuels sont déjà créés dans Paystack)
+            // Affichage du prix direct depuis le plan (le montant est déjà en unité principale)
             const isAnnual = billingCycle === "annually";
-            const displayAmount = plan.amount / 100;
+            const displayAmount = plan.amount; // Déjà converti dans l'API
             const monthlyEquivalent = isAnnual
               ? Math.round(displayAmount / 12)
               : null;
 
-            // Détails spécifiques par plan (basé sur le paystackId)
+            // Détails spécifiques par plan (basé sur le nom ou le montant)
             const isStandardPlan =
-              plan.paystackId === "PLN_dbrclylu9lqaraa" ||
-              plan.paystackId === "PLN_99h6qfha7ira9p8";
+              plan.name.toLowerCase().includes("standard") ||
+              (isAnnual ? plan.amount < 150000 : plan.amount < 20000);
             const planDetails = isStandardPlan
               ? {
                   features: [
@@ -408,11 +405,21 @@ export default function PricingPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12"
+            className="text-center py-12 bg-dark-900/30 backdrop-blur-xl rounded-2xl border border-dark-800/50 p-8"
           >
-            <p className="text-dark-400">
-              Aucun plan d'abonnement disponible pour le moment.
+            <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">
+              Plans {billingCycle === "monthly" ? "mensuels" : "annuels"} non disponibles
+            </h3>
+            <p className="text-dark-400 mb-4">
+              Les plans d'abonnement {billingCycle === "monthly" ? "mensuels" : "annuels"} ne sont pas encore configurés.
             </p>
+            <button
+              onClick={() => setBillingCycle(billingCycle === "monthly" ? "annually" : "monthly")}
+              className="px-6 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            >
+              Voir les plans {billingCycle === "monthly" ? "annuels" : "mensuels"}
+            </button>
           </motion.div>
         )}
 
