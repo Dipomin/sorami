@@ -77,9 +77,22 @@ export default function PricingPage() {
       // Charger les plans depuis Paystack
       const plansResponse = await fetch("/api/plans");
       if (!plansResponse.ok) {
-        throw new Error("Erreur lors du chargement des plans");
+        const errorData = await plansResponse.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error ||
+          (plansResponse.status === 503
+            ? "Service temporairement indisponible. Veuillez réessayer dans quelques instants."
+            : "Erreur lors du chargement des plans d'abonnement");
+        throw new Error(errorMessage);
       }
       const plansData = await plansResponse.json();
+
+      // Vérifier si des plans ont été retournés
+      if (!plansData.plans || plansData.plans.length === 0) {
+        throw new Error(
+          "Aucun plan d'abonnement n'est disponible pour le moment"
+        );
+      }
 
       // Filtrer les plans selon le cycle de facturation (interval)
       const targetInterval =

@@ -7,9 +7,33 @@ const SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 /**
  * GET /api/plans
  * Récupère tous les plans d'abonnement depuis Paystack et les synchronise avec la DB
+ * Si Paystack échoue, retourne les plans depuis la DB locale
  */
 export async function GET(request: NextRequest) {
   try {
+    // Vérifier si la clé Paystack est configurée
+    if (!SECRET || SECRET === '') {
+      console.error('PAYSTACK_SECRET_KEY non configurée');
+      // Fallback : retourner les plans depuis la DB
+      const dbPlans = await prisma.paystackPlan.findMany({
+        orderBy: { amount: 'asc' },
+      });
+      
+      if (dbPlans.length === 0) {
+        return NextResponse.json(
+          { error: 'Configuration Paystack manquante et aucun plan en cache' },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json({
+        success: true,
+        plans: dbPlans,
+        count: dbPlans.length,
+        source: 'cache',
+      });
+    }
+
     // 1. Récupérer les plans depuis Paystack
     const response = await fetch(`${PAYSTACK_BASE}/plan`, {
       method: 'GET',
@@ -21,9 +45,25 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       console.error('Erreur Paystack API:', response.status, response.statusText);
+      
+      // Fallback : retourner les plans depuis la DB
+      const dbPlans = await prisma.paystackPlan.findMany({
+        orderBy: { amount: 'asc' },
+      });
+      
+      if (dbPlans.length > 0) {
+        console.log('Utilisation des plans en cache suite à erreur Paystack');
+        return NextResponse.json({
+          success: true,
+          plans: dbPlans,
+          count: dbPlans.length,
+          source: 'cache',
+        });
+      }
+      
       return NextResponse.json(
-        { error: 'Impossible de récupérer les plans depuis Paystack' },
-        { status: response.status }
+        { error: 'Service Paystack temporairement indisponible' },
+        { status: 503 }
       );
     }
 
@@ -31,8 +71,23 @@ export async function GET(request: NextRequest) {
 
     if (!data.status || !data.data) {
       console.error('Réponse Paystack invalide:', data);
+      
+      // Fallback : retourner les plans depuis la DB
+      const dbPlans = await prisma.paystackPlan.findMany({
+        orderBy: { amount: 'asc' },
+      });
+      
+      if (dbPlans.length > 0) {
+        return NextResponse.json({
+          success: true,
+          plans: dbPlans,
+          count: dbPlans.length,
+          source: 'cache',
+        });
+      }
+      
       return NextResponse.json(
-        { error: 'Réponse Paystack invalide' },
+        { error: 'Données Paystack invalides' },
         { status: 500 }
       );
     }
@@ -75,15 +130,36 @@ export async function GET(request: NextRequest) {
       success: true,
       plans: sortedPlans,
       count: sortedPlans.length,
+      source: 'paystack',
     });
   } catch (error) {
     console.error('Erreur lors de la récupération des plans:', error);
+    
+    // Fallback final : essayer de retourner les plans depuis la DB
+    try {
+      const dbPlans = await prisma.paystackPlan.findMany({
+        orderBy: { amount: 'asc' },
+      });
+      
+      if (dbPlans.length > 0) {
+        console.log('Utilisation des plans en cache suite à erreur serveur');
+        return NextResponse.json({
+          success: true,
+          plans: dbPlans,
+          count: dbPlans.length,
+          source: 'cache',
+        });
+      }
+    } catch (dbError) {
+      console.error('Erreur lors de la récupération depuis la DB:', dbError);
+    }
+    
     return NextResponse.json(
       {
-        error: 'Erreur serveur lors de la récupération des plans',
+        error: 'Service temporairement indisponible',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 500 }
+      { status: 503 }
     );
   }
 }

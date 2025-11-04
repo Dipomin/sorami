@@ -1,6 +1,103 @@
-# 🔧 Scripts de Résolution d'Erreurs - Sorami Frontend
+# Scripts Sorami Frontend
 
-Ce répertoire contient des scripts pour diagnostiquer et corriger les problèmes de déploiement, notamment l'erreur 404 Nginx.
+Ce dossier contient des scripts utiles pour tester et maintenir l'application.
+
+## 💳 Gestion des plans Paystack
+
+### `sync-paystack-plans.mjs`
+Synchronise les plans d'abonnement depuis Paystack vers la base de données locale.
+
+```bash
+node scripts/sync-paystack-plans.mjs
+```
+
+**Utilisation** :
+- À exécuter après toute modification des plans sur Paystack
+- Recommandé : configurer en cron job (toutes les heures)
+- Utile pour maintenir le cache local à jour
+
+**Output** :
+- Liste tous les plans trouvés sur Paystack
+- Affiche les plans synchronisés avec détails (montant, intervalle)
+- Résumé groupé par intervalle (mensuel/annuel)
+
+### `test-plans-api.mjs`
+Teste l'endpoint `/api/plans` et affiche les résultats.
+
+```bash
+# Démarrer le serveur dans un terminal
+npm run dev
+
+# Dans un autre terminal, tester l'API
+node scripts/test-plans-api.mjs
+```
+
+**Vérifie** :
+- Disponibilité de l'API
+- Statut de la réponse
+- Source des données (Paystack ou cache)
+- Liste des plans disponibles par intervalle
+
+### `pre-deploy-check.sh`
+Vérification complète avant déploiement en production.
+
+```bash
+./scripts/pre-deploy-check.sh
+```
+
+**Vérifie** :
+- Variables d'environnement (PAYSTACK_SECRET_KEY, DATABASE_URL)
+- Présence de tous les fichiers modifiés
+- Dépendances installées (node_modules, Prisma)
+- Connexion à la base de données
+- État du build Next.js
+- Syntaxe TypeScript
+
+**Output** :
+- ✓ Succès : nombre de tests réussis
+- ⚠ Avertissements : points à vérifier
+- ✗ Erreurs : problèmes bloquants
+
+**Exit codes** :
+- `0` : Tout est OK ou seulement des avertissements
+- `1` : Des erreurs bloquantes ont été détectées
+
+## 🔧 Workflows recommandés
+
+### Avant chaque déploiement
+```bash
+# 1. Vérifier que tout est en ordre
+./scripts/pre-deploy-check.sh
+
+# 2. Si OK, synchroniser les plans
+node scripts/sync-paystack-plans.mjs
+
+# 3. Déployer
+npm run build
+pm2 restart ecosystem.config.js
+```
+
+### Après modification des plans sur Paystack
+```bash
+# Resynchroniser immédiatement
+node scripts/sync-paystack-plans.mjs
+```
+
+### Tests locaux
+```bash
+# 1. Démarrer le serveur
+npm run dev
+
+# 2. Dans un autre terminal, tester l'API
+node scripts/test-plans-api.mjs
+```
+
+### Maintenance régulière (production)
+```bash
+# Configurer un cron job pour synchroniser automatiquement
+# Ajouter à crontab :
+0 * * * * cd /path/to/sorami/front && node scripts/sync-paystack-plans.mjs >> /var/log/paystack-sync.log 2>&1
+```
 
 ## 📋 Scripts Disponibles
 
