@@ -2,7 +2,7 @@
 
 import React, { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard,
@@ -19,8 +19,9 @@ import {
   X,
   Film,
   ShoppingBag,
+  Loader2,
 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
@@ -36,7 +37,11 @@ const navItems = [
     label: "E-commerce",
   },
   { href: "/dashboard/generation-videos", icon: Video, label: "Vidéos" },
-  { href: "/dashboard/custom-videos", icon: Film, label: "Vidéos Custom" },
+  {
+    href: "/dashboard/custom-videos",
+    icon: Film,
+    label: "Vidéos personnalisées",
+  },
   { href: "/dashboard/blog", icon: FileText, label: "Blog" },
   { href: "/dashboard/books", icon: BookOpen, label: "Ebooks" },
   { href: "/dashboard/profile", icon: User, label: "Profil" },
@@ -46,6 +51,8 @@ const navItems = [
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { isLoaded, isSignedIn, user } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -54,11 +61,35 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     setIsMounted(true);
   }, []);
 
+  // Rediriger vers la page de connexion si l'utilisateur n'est pas connecté
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      router.push("/sign-in");
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   // Sur desktop (lg+), la sidebar est toujours visible
   // Sur mobile, elle est cachée par défaut
   const shouldShowSidebar = isMounted
     ? sidebarOpen || window.innerWidth >= 1024
     : true;
+
+  // Afficher un loader pendant la vérification de l'authentification
+  if (!isLoaded || !isSignedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-primary-500 animate-spin mx-auto mb-4" />
+          <p className="text-white text-lg font-medium">
+            Vérification de votre session...
+          </p>
+          <p className="text-dark-300 text-sm mt-2">
+            Vous allez être redirigé dans un instant
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-dark flex">
@@ -125,10 +156,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
-                  Mon profil
+                  {user?.firstName || user?.username || "Mon profil"}
                 </p>
                 <p className="text-xs text-dark-400 truncate">
-                  Gérer mon compte
+                  {user?.primaryEmailAddress?.emailAddress ||
+                    "Gérer mon compte"}
                 </p>
               </div>
             </div>

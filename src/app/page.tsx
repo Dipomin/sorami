@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import BlogPreview from "@/components/BlogPreview";
 import Newsletter from "@/components/Newsletter";
+import GeneratedImagesGallery from "@/components/GeneratedImagesGallery";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
 
 const features = [
@@ -133,6 +134,31 @@ const HomePage = () => {
     sortBy: "publishedAt",
     sortOrder: "desc",
   });
+
+  // Images générées disponibles (via API pour contourner les restrictions de Next.js)
+  const generatedImages = [
+    "/api/generated-images?filename=gemini_generated_20251021_225043_1.png",
+    "/api/generated-images?filename=gemini_generated_20251022_133204_1.png",
+    "/api/generated-images?filename=gemini_generated_20251022_151513_1.png",
+    "/api/generated-images?filename=gemini_generated_20251022_160306_1.png",
+    "/api/generated-images?filename=gemini_generated_20251022_171756_1.png",
+    "/api/generated-images?filename=gemini_generated_20251022_172851_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_101843_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_105748_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_111608_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_133138_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_134337_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_135324_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_140745_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_140747_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_141133_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_141912_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_142608_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_143229_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_164411_1.png",
+    "/api/generated-images?filename=gemini_generated_20251023_170225_1.png",
+    "/api/generated-images?filename=gemini_generated_20251024_081852_1.png",
+  ];
 
   // Calculer les prix selon le cycle de facturation
   const getPlanPrice = (basePrice: string) => {
@@ -347,6 +373,9 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Generated Images Gallery */}
+      <GeneratedImagesGallery images={generatedImages} />
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 px-6">

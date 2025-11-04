@@ -20,6 +20,7 @@ APP_NAME="sorami-frontend"
 APP_DIR="/home/sorami/sorami"
 ENV=${1:-production}
 BACKUP_DIR="/home/sorami/backups"
+NGINX_CONFIG="/etc/nginx/sites-available/sorami"
 
 # Fonctions utilitaires
 log_info() {
@@ -126,10 +127,6 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-# Copier le fichier d'environnement vers .env (utilisé par Next.js)
-log_info "Configuration de .env pour le build..."
-cp $ENV_FILE .env
-log_success "✅ Variables d'environnement configurées ($ENV_FILE → .env)"
 
 # 6. Installer les dépendances
 log_info "📦 Installation des dépendances..."
@@ -225,7 +222,29 @@ log_info "🧹 Nettoyage..."
 find $BACKUP_DIR -name "sorami_*.sql.gz" -mtime +7 -delete 2>/dev/null || true
 npm cache clean --force 2>/dev/null || true
 
-# 14. Afficher les informations de déploiement
+# 14. Vérification finale Nginx
+log_info "🔧 Vérification finale de Nginx..."
+
+if systemctl is-active --quiet nginx; then
+    log_success "✅ Nginx actif"
+else
+    log_warning "⚠️  Nginx non actif, tentative de démarrage..."
+    sudo systemctl start nginx || log_error "❌ Impossible de démarrer Nginx"
+fi
+
+# Vérifier que la configuration est activée
+if [ ! -L "/etc/nginx/sites-enabled/sorami" ]; then
+    log_warning "Configuration Nginx non activée, création du lien symbolique..."
+    if [ -f "$NGINX_CONFIG" ]; then
+        sudo ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/sorami
+        sudo systemctl reload nginx
+        log_success "✅ Configuration Nginx activée"
+    else
+        log_warning "⚠️  Fichier de configuration Nginx manquant: $NGINX_CONFIG"
+    fi
+fi
+
+# 15. Afficher les informations de déploiement
 echo ""
 echo "=============================================="
 log_success "🎉 Déploiement terminé avec succès!"
@@ -236,17 +255,33 @@ echo "   - Environnement: $ENV"
 echo "   - Commit: $COMMIT_HASH"
 echo "   - Date: $(date '+%Y-%m-%d %H:%M:%S')"
 echo ""
+echo "🌐 URLs:"
+echo "   - Production: https://sorami.app"
+echo "   - Localhost: http://localhost:3000"
+echo ""
 echo "🔗 Commandes utiles:"
 echo "   - Logs:      pm2 logs $APP_NAME"
 echo "   - Status:    pm2 status"
 echo "   - Monitor:   pm2 monit"
 echo "   - Restart:   pm2 restart $APP_NAME"
+echo "   - Diagnostic: ./diagnose-404.sh"
 echo ""
 
-# 15. Notification (optionnelle)
+# 16. Notification (optionnelle)
 # Vous pouvez ajouter une notification Slack, Discord, email, etc.
 # curl -X POST -H 'Content-type: application/json' \
 #   --data '{"text":"✅ Sorami Frontend déployé avec succès"}' \
 #   YOUR_WEBHOOK_URL
+
+# 17. Message final avec vérification
+echo "🔍 Vérification finale..."
+FINAL_CHECK=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "000")
+
+if [ "$FINAL_CHECK" == "200" ] || [ "$FINAL_CHECK" == "301" ] || [ "$FINAL_CHECK" == "302" ]; then
+    log_success "✅ Application répond correctement (HTTP $FINAL_CHECK)"
+else
+    log_warning "⚠️  Application ne répond pas comme attendu (HTTP $FINAL_CHECK)"
+    log_info "Exécutez ./diagnose-404.sh pour diagnostiquer le problème"
+fi
 
 exit 0

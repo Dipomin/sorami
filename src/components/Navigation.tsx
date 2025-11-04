@@ -40,25 +40,37 @@ const protectedNavItems = [
     description: "Vue d'ensemble de vos projets",
   },
   {
-    href: "/generate-images",
+    href: "/dashboard/generate-images",
     icon: Image,
     label: "Générer des images",
     description: "IA créative pour vos visuels",
   },
   {
-    href: "/generate-videos",
+    href: "/dashboard/ecommerce-images",
+    icon: Image,
+    label: "Générer des images ecommerce",
+    description: "IA créative pour vos images de produits",
+  },
+  {
+    href: "/dashboard/generate-videos",
     icon: Video,
     label: "Créer des vidéos",
     description: "Montage vidéo automatisé",
   },
   {
-    href: "/blog",
+    href: "/dashboard/custom-videos",
+    icon: Video,
+    label: "Créer des vidéos personnalisées",
+    description: "Montage vidéo automatisé avec contenu personnalisé",
+  },
+  {
+    href: "/dashboard/blog",
     icon: FileText,
     label: "Rédiger un article",
     description: "Contenu optimisé SEO",
   },
   {
-    href: "/books",
+    href: "/dashboard/books",
     icon: BookOpen,
     label: "Écrire un ebook",
     description: "Livres numériques complets",
@@ -71,6 +83,7 @@ const publicNavItems = [
   { href: "/blog", label: "Blog" },
   { href: "/#features", label: "Fonctionnalités" },
   { href: "/#pricing", label: "Tarifs" },
+  { href: "/contact", label: "Contact" },
 ];
 
 const Navigation: React.FC<NavigationProps> = ({ className = "" }) => {
@@ -159,9 +172,9 @@ const Navigation: React.FC<NavigationProps> = ({ className = "" }) => {
                     <Menu className="w-5 h-5" />
                   </button>
 
-                  {/* Notifications */}
+                  {/* Notifications 
                   <NotificationCenter />
-
+*/}
                   {/* User button */}
                   <UserButton
                     appearance={{
