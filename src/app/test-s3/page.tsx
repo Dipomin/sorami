@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { usePresignedUrl } from "@/hooks/usePresignedUrl";
 import { S3Image, BlogCoverImage } from "@/components/ui/S3Image";
