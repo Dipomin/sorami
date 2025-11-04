@@ -155,6 +155,19 @@ else
 fi
 echo ""
 
+# 7. Configuration Paystack
+echo "💳 7. Configuration Paystack"
+if [ -f scripts/check-paystack-config.mjs ]; then
+  if node scripts/check-paystack-config.mjs > /dev/null 2>&1; then
+    check "Configuration Paystack valide" "node scripts/check-paystack-config.mjs"
+  else
+    warning "Problème de configuration Paystack (exécuter: node scripts/check-paystack-config.mjs)"
+  fi
+else
+  warning "Script de vérification Paystack non trouvé"
+fi
+echo ""
+
 # Résumé
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📊 RÉSUMÉ"

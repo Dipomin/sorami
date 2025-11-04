@@ -18,6 +18,34 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
  */
 export async function POST(request: NextRequest) {
   try {
+    // 0. 🔑 CRITIQUE : Vérifier que la clé Paystack est configurée
+    if (!SECRET || SECRET === '') {
+      console.error('❌ PAYSTACK_SECRET_KEY non configurée ou vide');
+      return NextResponse.json(
+        { 
+          error: 'Configuration Paystack manquante. Veuillez contacter le support.',
+          details: 'PAYSTACK_SECRET_KEY non configurée dans les variables d\'environnement'
+        },
+        { status: 503 }
+      );
+    }
+
+    // Vérifier que c'est bien une clé valide (commence par sk_)
+    if (!SECRET.startsWith('sk_test_') && !SECRET.startsWith('sk_live_')) {
+      console.error('❌ PAYSTACK_SECRET_KEY invalide (ne commence pas par sk_test_ ou sk_live_)');
+      return NextResponse.json(
+        { 
+          error: 'Configuration Paystack invalide. Veuillez contacter le support.',
+          details: 'Format de clé Paystack incorrect'
+        },
+        { status: 503 }
+      );
+    }
+
+    // Logger l'environnement (masqué pour la sécurité)
+    const keyPrefix = SECRET.substring(0, 10);
+    console.log(`🔑 Utilisation de la clé Paystack: ${keyPrefix}...`);
+
     // 1. Vérifier l'authentification
     const { userId } = getAuth(request);
 
@@ -102,6 +130,8 @@ export async function POST(request: NextRequest) {
       channels: ['card'], // Seulement carte pour les abonnements
     };
 
+    console.log(`📡 Initialisation transaction Paystack pour ${user.email} - Plan: ${plan.name}`);
+
     const initResponse = await fetch(`${PAYSTACK_BASE}/transaction/initialize`, {
       method: 'POST',
       headers: {
@@ -112,10 +142,34 @@ export async function POST(request: NextRequest) {
     });
 
     if (!initResponse.ok) {
-      const errorData = await initResponse.json();
-      console.error('Erreur initialisation transaction Paystack:', errorData);
+      const errorData = await initResponse.json().catch(() => ({ message: 'Erreur inconnue' }));
+      console.error('❌ Erreur initialisation transaction Paystack:', {
+        status: initResponse.status,
+        statusText: initResponse.statusText,
+        error: errorData,
+        plan: plan.name,
+        userEmail: user.email,
+      });
+
+      // Messages d'erreur détaillés selon le code HTTP
+      let userMessage = 'Erreur lors de l\'initialisation du paiement';
+      if (initResponse.status === 401) {
+        userMessage = 'Erreur d\'authentification Paystack. Veuillez réessayer ou contacter le support.';
+        console.error('🔴 CRITIQUE: Clé Paystack invalide ou expirée !');
+      } else if (initResponse.status === 400) {
+        userMessage = errorData.message || 'Données de paiement invalides';
+      } else if (initResponse.status === 404) {
+        userMessage = 'Plan d\'abonnement non trouvé sur Paystack';
+      } else if (initResponse.status === 500) {
+        userMessage = 'Erreur serveur Paystack. Veuillez réessayer dans quelques instants.';
+      }
+
       return NextResponse.json(
-        { error: errorData.message || 'Erreur lors de l\'initialisation du paiement' },
+        { 
+          error: userMessage,
+          details: errorData.message || initResponse.statusText,
+          status: initResponse.status
+        },
         { status: initResponse.status }
       );
     }
