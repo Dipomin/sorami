@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
     // 1. Vérifier l'authentification
     const { userId } = getAuth(request);
 
+    console.log(`👤 Initialisation abonnement pour userId: ${userId}`);
+
     if (!userId) {
       return NextResponse.json(
         { error: 'Non authentifié' },
@@ -66,6 +68,8 @@ export async function POST(request: NextRequest) {
         lastName: true,
       },
     });
+
+    console.log(`📧 Récupération utilisateur: ${user} 'Utilisateur non trouvé'`);
 
     if (!user || !user.email) {
       return NextResponse.json(
