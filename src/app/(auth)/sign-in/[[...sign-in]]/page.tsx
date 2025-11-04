@@ -9,7 +9,7 @@ export default function SignInPage() {
             Connexion à votre compte
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Accédez à votre espace Eboox
+            Accédez à votre espace Sorami
           </p>
         </div>
         <div className="flex justify-center">

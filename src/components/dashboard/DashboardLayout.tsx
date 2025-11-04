@@ -29,19 +29,19 @@ interface DashboardLayoutProps {
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Accueil" },
-  { href: "/generation-images", icon: Image, label: "Images" },
+  { href: "/dashboard/generation-images", icon: Image, label: "Images" },
   {
     href: "/dashboard/ecommerce-images",
     icon: ShoppingBag,
     label: "E-commerce",
   },
-  { href: "/generation-videos", icon: Video, label: "Vidéos" },
+  { href: "/dashboard/generation-videos", icon: Video, label: "Vidéos" },
   { href: "/dashboard/custom-videos", icon: Film, label: "Vidéos Custom" },
-  { href: "/blog", icon: FileText, label: "Blog" },
-  { href: "/books", icon: BookOpen, label: "Ebooks" },
-  { href: "/profile", icon: User, label: "Profil" },
+  { href: "/dashboard/blog", icon: FileText, label: "Blog" },
+  { href: "/dashboard/books", icon: BookOpen, label: "Ebooks" },
+  { href: "/dashboard/profile", icon: User, label: "Profil" },
   { href: "/dashboard/stats", icon: BarChart3, label: "Statistiques" },
-  { href: "/settings", icon: Settings, label: "Paramètres" },
+  { href: "/dashboard/settings", icon: Settings, label: "Paramètres" },
 ];
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {

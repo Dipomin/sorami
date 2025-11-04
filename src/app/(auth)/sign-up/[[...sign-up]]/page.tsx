@@ -9,7 +9,7 @@ export default function SignUpPage() {
             Créer votre compte
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Rejoignez Eboox et commencez à créer vos livres avec l'IA
+            Rejoignez Sorami et commencez à créer images, vidéos, articles, et plus encore
           </p>
         </div>
         <div className="flex justify-center">

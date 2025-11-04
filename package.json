@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "promote-admin": "npx tsx scripts/promote-admin.ts",
+    "clean-duplicate-users": "npx tsx scripts/clean-duplicate-users.ts",
+    "check-aws-config": "npx tsx scripts/check-aws-config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.910.0",
@@ -21,6 +24,7 @@
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@tailwindcss/line-clamp": "^0.4.4",
     "@tiptap/extension-color": "^3.7.2",
     "@tiptap/extension-highlight": "^3.7.2",
     "@tiptap/extension-image": "^3.7.2",

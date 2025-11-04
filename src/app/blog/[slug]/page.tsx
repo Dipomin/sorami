@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import { useBlogComments } from "@/hooks/useBlogComments";
 import { motion } from "framer-motion";
 import { generateArticleJsonLd } from "@/lib/blog-metadata";
+import { S3Image } from "@/components/ui/S3Image";
 
 interface BlogPost {
   id: string;
@@ -249,10 +250,18 @@ export default function BlogPostPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="mb-8 rounded-2xl overflow-hidden"
             >
-              <img
-                src={post.coverImage}
+              <S3Image
+                s3Key={post.coverImage}
                 alt={post.title}
                 className="w-full h-96 object-cover"
+                fallback={
+                  <div className="w-full h-96 bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <div className="text-4xl mb-4">📝</div>
+                      <div className="text-lg">Image de couverture</div>
+                    </div>
+                  </div>
+                }
               />
             </motion.div>
           )}

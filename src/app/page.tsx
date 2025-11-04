@@ -16,7 +16,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-
+import BlogPreview from "@/components/BlogPreview";
+import Newsletter from "@/components/Newsletter";
+import { useBlogPosts } from "@/hooks/useBlogPosts";
 
 const features = [
   {
@@ -119,11 +121,18 @@ const pricingPlans = [
   },
 ];
 
-
 const HomePage = () => {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">(
     "monthly"
   );
+
+  // Récupérer les derniers articles de blog
+  const { posts: blogPosts, isLoading: blogLoading } = useBlogPosts({
+    limit: 6,
+    status: "PUBLISHED",
+    sortBy: "publishedAt",
+    sortOrder: "desc",
+  });
 
   // Calculer les prix selon le cycle de facturation
   const getPlanPrice = (basePrice: string) => {
@@ -507,6 +516,14 @@ const HomePage = () => {
           </div>
         </motion.div>
       </section>
+
+      {/* Newsletter Section */}
+      <Newsletter />
+
+      {/* Blog Preview Section */}
+      {!blogLoading && blogPosts.length > 0 && (
+        <BlogPreview posts={blogPosts} />
+      )}
 
       {/* Footer */}
       <footer className="border-t border-dark-800/50 py-12 px-6">

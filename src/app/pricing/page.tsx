@@ -82,10 +82,11 @@ export default function PricingPage() {
       const plansData = await plansResponse.json();
 
       // Filtrer les plans selon le cycle de facturation (interval)
-      const targetInterval = billingCycle === "monthly" ? "monthly" : "annually";
-      
-      const filteredPlans = (plansData.plans || []).filter((plan: Plan) => 
-        plan.interval === targetInterval
+      const targetInterval =
+        billingCycle === "monthly" ? "monthly" : "annually";
+
+      const filteredPlans = (plansData.plans || []).filter(
+        (plan: Plan) => plan.interval === targetInterval
       );
 
       setPlans(filteredPlans);
@@ -409,16 +410,24 @@ export default function PricingPage() {
           >
             <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-white mb-2">
-              Plans {billingCycle === "monthly" ? "mensuels" : "annuels"} non disponibles
+              Plans {billingCycle === "monthly" ? "mensuels" : "annuels"} non
+              disponibles
             </h3>
             <p className="text-dark-400 mb-4">
-              Les plans d'abonnement {billingCycle === "monthly" ? "mensuels" : "annuels"} ne sont pas encore configurés.
+              Les plans d'abonnement{" "}
+              {billingCycle === "monthly" ? "mensuels" : "annuels"} ne sont pas
+              encore configurés.
             </p>
             <button
-              onClick={() => setBillingCycle(billingCycle === "monthly" ? "annually" : "monthly")}
+              onClick={() =>
+                setBillingCycle(
+                  billingCycle === "monthly" ? "annually" : "monthly"
+                )
+              }
               className="px-6 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
             >
-              Voir les plans {billingCycle === "monthly" ? "annuels" : "mensuels"}
+              Voir les plans{" "}
+              {billingCycle === "monthly" ? "annuels" : "mensuels"}
             </button>
           </motion.div>
         )}

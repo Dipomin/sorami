@@ -4,6 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { frFR } from "@clerk/localizations";
 import { dark } from "@clerk/themes";
+import AppLayout from "@/components/layouts/AppLayout";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,7 +20,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Sorami - Plateforme d'Intelligence Artificielle pour la création de contenu",
+  title:
+    "Sorami - Plateforme d'Intelligence Artificielle pour la création de contenu",
   description:
     "Créez des images, vidéos, articles de blog et ebooks avec l'intelligence artificielle",
 };
@@ -56,7 +58,7 @@ export default function RootLayout({
         <body
           className={`${inter.variable} ${poppins.variable} font-sans antialiased bg-gradient-dark text-white`}
         >
-          {children}
+          <AppLayout>{children}</AppLayout>
         </body>
       </html>
     </ClerkProvider>

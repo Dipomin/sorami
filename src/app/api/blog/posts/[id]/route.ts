@@ -19,7 +19,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Déterminer si c'est un ID ou un slug
     const isSlug = !id.startsWith('clk') && !id.startsWith('cm'); // cuid patterns
@@ -127,7 +127,7 @@ export async function PUT(
     // Vérifier que l'utilisateur est admin
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     const {
@@ -273,7 +273,7 @@ export async function DELETE(
     // Vérifier que l'utilisateur est admin
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Vérifier que l'article existe
     const existingPost = await prisma.blogPost.findUnique({

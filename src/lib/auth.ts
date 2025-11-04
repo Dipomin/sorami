@@ -15,7 +15,7 @@ export async function getCurrentUser() {
   }
   
   try {
-    // Chercher l'utilisateur dans notre base de données
+    // Chercher l'utilisateur dans notre base de données par clerkId
     let user = await prisma.user.findUnique({
       where: { clerkId: userId },
       include: {
@@ -27,7 +27,7 @@ export async function getCurrentUser() {
       },
     });
     
-    // Si l'utilisateur n'existe pas dans notre base, le créer automatiquement
+    // Si l'utilisateur n'existe pas dans notre base, le créer ou le synchroniser
     if (!user) {
       console.log('Utilisateur Clerk trouvé mais pas en base, synchronisation...');
       
@@ -46,19 +46,9 @@ export async function getCurrentUser() {
         return null;
       }
       
-      // Créer l'utilisateur dans notre base de données
-      user = await prisma.user.create({
-        data: {
-          clerkId: userId,
-          email,
-          firstName: clerkUser.firstName || '',
-          lastName: clerkUser.lastName || '',
-          name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || email,
-          avatar: clerkUser.imageUrl || null,
-          role: 'USER',
-          status: 'ACTIVE',
-          isEmailVerified: clerkUser.emailAddresses[0]?.verification?.status === 'verified',
-        },
+      // Vérifier si un utilisateur existe déjà avec cet email
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email },
         include: {
           organizationMemberships: {
             include: {
@@ -68,12 +58,83 @@ export async function getCurrentUser() {
         },
       });
       
-      console.log('Utilisateur synchronisé avec succès:', user.id);
+      if (existingUserByEmail) {
+        // Utilisateur existe avec cet email, mettre à jour le clerkId
+        console.log(`Mise à jour du clerkId pour l'utilisateur existant: ${email}`);
+        user = await prisma.user.update({
+          where: { email },
+          data: {
+            clerkId: userId,
+            // Mettre à jour les autres informations aussi
+            firstName: clerkUser.firstName || existingUserByEmail.firstName,
+            lastName: clerkUser.lastName || existingUserByEmail.lastName,
+            name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || existingUserByEmail.name,
+            avatar: clerkUser.imageUrl || existingUserByEmail.avatar,
+            isEmailVerified: clerkUser.emailAddresses[0]?.verification?.status === 'verified',
+          },
+          include: {
+            organizationMemberships: {
+              include: {
+                organization: true,
+              },
+            },
+          },
+        });
+        console.log('ClerkId mis à jour avec succès pour:', user.id);
+      } else {
+        // Créer un nouvel utilisateur
+        user = await prisma.user.create({
+          data: {
+            clerkId: userId,
+            email,
+            firstName: clerkUser.firstName || '',
+            lastName: clerkUser.lastName || '',
+            name: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || email,
+            avatar: clerkUser.imageUrl || null,
+            role: 'USER',
+            status: 'ACTIVE',
+            isEmailVerified: clerkUser.emailAddresses[0]?.verification?.status === 'verified',
+          },
+          include: {
+            organizationMemberships: {
+              include: {
+                organization: true,
+              },
+            },
+          },
+        });
+        console.log('Nouvel utilisateur créé avec succès:', user.id);
+      }
     }
     
     return user;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la récupération/synchronisation de l\'utilisateur:', error);
+    
+    // Gestion spécifique des erreurs Prisma
+    if (error.code === 'P2002') {
+      console.error('Contrainte unique violée - possible race condition, retry...');
+      // Dans ce cas, essayons de récupérer l'utilisateur existant
+      try {
+        const user = await prisma.user.findUnique({
+          where: { clerkId: userId },
+          include: {
+            organizationMemberships: {
+              include: {
+                organization: true,
+              },
+            },
+          },
+        });
+        if (user) {
+          console.log('Utilisateur récupéré après race condition:', user.id);
+          return user;
+        }
+      } catch (retryError) {
+        console.error('Erreur lors du retry:', retryError);
+      }
+    }
+    
     return null;
   }
 }

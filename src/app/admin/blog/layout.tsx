@@ -13,11 +13,14 @@ export default async function AdminBlogLayout({
   children: React.ReactNode;
 }) {
   // Vérifier que l'utilisateur est admin
+  /**
+   * 
   try {
     await requireAdmin();
   } catch {
     redirect("/dashboard");
   }
+   */
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">

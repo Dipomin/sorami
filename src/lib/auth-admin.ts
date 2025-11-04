@@ -3,8 +3,7 @@
  * Vérifie que l'utilisateur est authentifié ET a le rôle ADMIN
  */
 
-import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Vérifie que l'utilisateur est authentifié et a le rôle ADMIN
@@ -12,33 +11,29 @@ import { prisma } from '@/lib/prisma';
  * @returns User avec ses informations
  */
 export async function requireAdmin() {
-  const { userId } = await auth();
+  // Utiliser getCurrentUser qui gère la synchronisation automatique
   
-  if (!userId) {
+  const user = await getCurrentUser();
+
+  console.log('requireAdmin - user:', user?.clerkId, user?.role);
+  
+  if (!user) {
     throw new Error('Unauthorized - Authentication required');
   }
 
-  // Récupérer l'utilisateur avec son rôle
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-    },
-  });
-
-  if (!user) {
-    throw new Error('User not found in database');
-  }
+  console.log('requireAdmin - user role:', user.role);
 
   // Vérifier le rôle ADMIN
   if (user.role !== 'ADMIN') {
     throw new Error('Forbidden - Admin access required');
   }
 
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  };
 }
 
 /**
