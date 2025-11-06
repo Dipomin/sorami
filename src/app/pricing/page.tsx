@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Loader2, Check, AlertCircle, Crown, Zap, Rocket } from "lucide-react";
 import { motion } from "framer-motion";
@@ -38,6 +37,7 @@ export default function PricingPage() {
   const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(
     null
   );
+  const [buyingOneTime, setBuyingOneTime] = useState(false);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">(
     "monthly"
   );
@@ -125,6 +125,51 @@ export default function PricingPage() {
     }
   };
 
+  const handleBuyOneTime = async () => {
+    try {
+      setBuyingOneTime(true);
+      setError(null);
+
+      const token = await getToken();
+      if (!token) {
+        setError("Vous devez être connecté pour acheter");
+        return;
+      }
+
+      // Initialiser le paiement unique
+      const response = await fetch("/api/payments/one-time/initialize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          offerType: "pack-createur",
+          amount: 5000,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de l'initialisation");
+      }
+
+      const data = await response.json();
+
+      // Rediriger vers l'URL d'autorisation Paystack
+      if (data.authorizationUrl) {
+        window.location.href = data.authorizationUrl;
+      } else {
+        throw new Error("URL d'autorisation manquante");
+      }
+    } catch (err) {
+      console.error("Erreur achat:", err);
+      setError(err instanceof Error ? err.message : "Erreur inconnue");
+    } finally {
+      setBuyingOneTime(false);
+    }
+  };
+
   const handleSubscribe = async (planId: string) => {
     try {
       setSubscribingPlanId(planId);
@@ -172,306 +217,467 @@ export default function PricingPage() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
-        </div>
-      </DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-12"
+      >
+        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          Choisissez votre{" "}
+          <span className="bg-gradient-to-r from-primary-500 to-pink-500 bg-clip-text text-transparent">
+            abonnement
+          </span>
+        </h1>
+        <p className="text-lg text-dark-400 max-w-2xl mx-auto mb-8">
+          Accédez à toutes les fonctionnalités de Sorami et créez du contenu
+          illimité avec l'IA
+        </p>
+
+        {/* Toggle Mensuel/Annuel */}
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => setBillingCycle("monthly")}
+            className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
+              billingCycle === "monthly"
+                ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
+                : "bg-dark-800/50 text-dark-400 hover:text-white"
+            }`}
+          >
+            Mensuel
+          </button>
+          <button
+            onClick={() => setBillingCycle("annually")}
+            className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 relative ${
+              billingCycle === "annually"
+                ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
+                : "bg-dark-800/50 text-dark-400 hover:text-white"
+            }`}
+          >
+            Annuel
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+              -20%
+            </span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Abonnement actuel */}
+      {currentSubscription && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="mb-8 p-4 bg-green-500/10 border border-green-500/30 rounded-xl"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Choisissez votre{" "}
-            <span className="bg-gradient-to-r from-primary-500 to-pink-500 bg-clip-text text-transparent">
-              abonnement
+          <div className="flex items-center gap-2 text-green-400">
+            <Check className="w-5 h-5" />
+            <span className="font-semibold">
+              Abonnement actif : {currentSubscription.plan.name}
             </span>
-          </h1>
-          <p className="text-lg text-dark-400 max-w-2xl mx-auto mb-8">
-            Accédez à toutes les fonctionnalités de Sorami et créez du contenu
-            illimité avec l'IA
-          </p>
-
-          {/* Toggle Mensuel/Annuel */}
-          <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={() => setBillingCycle("monthly")}
-              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 ${
-                billingCycle === "monthly"
-                  ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
-                  : "bg-dark-800/50 text-dark-400 hover:text-white"
-              }`}
-            >
-              Mensuel
-            </button>
-            <button
-              onClick={() => setBillingCycle("annually")}
-              className={`px-6 py-2.5 rounded-lg font-semibold transition-all duration-300 relative ${
-                billingCycle === "annually"
-                  ? "bg-gradient-to-r from-primary-500 to-pink-500 text-white shadow-lg"
-                  : "bg-dark-800/50 text-dark-400 hover:text-white"
-              }`}
-            >
-              Annuel
-              <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                -20%
-              </span>
-            </button>
           </div>
         </motion.div>
+      )}
 
-        {/* Abonnement actuel */}
-        {currentSubscription && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-4 bg-green-500/10 border border-green-500/30 rounded-xl"
-          >
-            <div className="flex items-center gap-2 text-green-400">
-              <Check className="w-5 h-5" />
-              <span className="font-semibold">
-                Abonnement actif : {currentSubscription.plan.name}
-              </span>
+      {/* Erreur */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+        >
+          <div className="flex items-center gap-2 text-red-400">
+            <AlertCircle className="w-5 h-5" />
+            <span>{error}</span>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Offre unique Pack Créateur */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 max-w-5xl mx-auto"
+      >
+        <div className="relative p-8 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 backdrop-blur-xl rounded-2xl border-2 border-emerald-500/50 hover:border-emerald-400/70 transition-all duration-300">
+          {/* Badge */}
+          <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+            <span className="px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-sm font-bold rounded-full shadow-lg">
+              ⚡ PAIEMENT UNIQUE
+            </span>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            {/* Gauche : Info */}
+            <div>
+              {/* Icône */}
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mb-6">
+                <Zap className="w-7 h-7 text-white" />
+              </div>
+
+              {/* Nom */}
+              <h3 className="text-3xl font-bold text-white mb-3">
+                Pack Créateur
+              </h3>
+
+              {/* Description */}
+              <p className="text-dark-300 mb-4">
+                Parfait pour démarrer avec Sorami. Achetez une fois, utilisez
+                quand vous voulez !
+              </p>
+
+              {/* Prix */}
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-white">5,000</span>
+                  <span className="text-xl text-dark-400">F CFA</span>
+                </div>
+                <p className="text-emerald-400 text-sm mt-2 font-semibold">
+                  🎯 Aucun abonnement - Paiement unique
+                </p>
+              </div>
             </div>
-          </motion.div>
-        )}
 
-        {/* Erreur */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
-          >
-            <div className="flex items-center gap-2 text-red-400">
-              <AlertCircle className="w-5 h-5" />
-              <span>{error}</span>
+            {/* Droite : Features + CTA */}
+            <div>
+              {/* Features */}
+              <div className="space-y-3 mb-6">
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-semibold text-sm">
+                    20 générations d'images haute qualité
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-white font-semibold text-sm">
+                    2 articles de blog optimisés SEO
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-dark-300 text-sm">
+                    Valable à vie - Pas d'expiration
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-dark-300 text-sm">
+                    Stockage cloud sécurisé
+                  </span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Check className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-dark-300 text-sm">
+                    Support par email
+                  </span>
+                </div>
+              </div>
+
+              {/* Bouton */}
+              <Button
+                onClick={handleBuyOneTime}
+                disabled={buyingOneTime}
+                size="lg"
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg"
+              >
+                {buyingOneTime ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Traitement...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-5 h-5 mr-2" />
+                    Acheter le Pack Créateur
+                  </>
+                )}
+              </Button>
             </div>
-          </motion.div>
-        )}
+          </div>
+        </div>
+      </motion.div>
 
-        {/* Plans */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          {plans.map((plan, index) => {
-            const Icon = getPlanIcon(index);
-            const gradient = gradients[index % gradients.length];
-            const isCurrentPlan = currentSubscription?.plan.id === plan.id;
-            const isSubscribing = subscribingPlanId === plan.id;
+      {/* Séparateur */}
+      <div className="flex items-center gap-4 mb-8 max-w-5xl mx-auto">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-dark-700 to-transparent" />
+        <span className="text-dark-400 text-sm font-semibold">
+          OU CHOISISSEZ UN ABONNEMENT
+        </span>
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-dark-700 to-transparent" />
+      </div>
 
-            // Affichage du prix direct depuis le plan (le montant est déjà en unité principale)
-            const isAnnual = billingCycle === "annually";
-            const displayAmount = plan.amount; // Déjà converti dans l'API
-            const monthlyEquivalent = isAnnual
-              ? Math.round(displayAmount / 12)
-              : null;
+      {/* Plans d'abonnement */}
+      <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        {plans.map((plan, index) => {
+          const Icon = getPlanIcon(index);
+          const gradient = gradients[index % gradients.length];
+          const isCurrentPlan = currentSubscription?.plan.id === plan.id;
+          const isSubscribing = subscribingPlanId === plan.id;
 
-            // Détails spécifiques par plan (basé sur le nom ou le montant)
-            const isStandardPlan =
-              plan.name.toLowerCase().includes("standard") ||
-              (isAnnual ? plan.amount < 150000 : plan.amount < 20000);
-            const planDetails = isStandardPlan
-              ? {
-                  features: [
-                    "3 500 crédits par mois",
-                    "100 images haute qualité",
-                    "10 articles de blog optimisés SEO",
-                    "3 vidéos HD",
-                    "Stockage cloud sécurisé",
-                    "Support prioritaire",
-                  ],
-                  badge: null,
-                }
-              : {
-                  features: [
-                    "8 000 crédits par mois",
-                    "700 images premium",
-                    "50 articles de blog professionnels",
-                    "10 vidéos HD personnalisées",
-                    "5 ebooks complets",
-                    "API complète",
-                    "Support dédié 24/7",
-                    "Analytiques avancées",
-                  ],
-                  badge: "🔥 POPULAIRE",
-                };
+          // Affichage du prix direct depuis le plan (le montant est déjà en unité principale)
+          const isAnnual = billingCycle === "annually";
+          const displayAmount = plan.amount; // Déjà converti dans l'API
+          const monthlyEquivalent = isAnnual
+            ? Math.round(displayAmount / 12)
+            : null;
 
-            return (
-              <motion.div
-                key={plan.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`relative p-8 bg-dark-900/50 backdrop-blur-xl rounded-2xl border-2 ${
+          // Détails spécifiques par plan (basé sur le nom ou le montant)
+          const isStandardPlan =
+            plan.name.toLowerCase().includes("standard") ||
+            (isAnnual ? plan.amount < 150000 : plan.amount < 20000);
+          const planDetails = isStandardPlan
+            ? {
+                features: [
+                  "3 500 crédits par mois",
+                  "100 images haute qualité",
+                  "10 articles de blog optimisés SEO",
+                  "3 vidéos HD",
+                  "Stockage cloud sécurisé",
+                  "Support prioritaire",
+                ],
+                badge: null,
+              }
+            : {
+                features: [
+                  "8 000 crédits par mois",
+                  "700 images premium",
+                  "50 articles de blog professionnels",
+                  "10 vidéos HD personnalisées",
+                  "5 ebooks complets",
+                  "API complète",
+                  "Support dédié 24/7",
+                  "Analytiques avancées",
+                ],
+                badge: "🔥 POPULAIRE",
+              };
+
+          return (
+            <motion.div
+              key={plan.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className={`relative p-8 bg-dark-900/50 backdrop-blur-xl rounded-2xl border-2 ${
+                isCurrentPlan
+                  ? "border-green-500/50"
+                  : planDetails.badge
+                  ? "border-primary-500/50"
+                  : "border-dark-800/50"
+              } hover:border-primary-500/50 transition-all duration-300 ${
+                planDetails.badge ? "scale-105" : ""
+              }`}
+            >
+              {/* Badge populaire ou actif */}
+              {planDetails.badge && !isCurrentPlan && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="px-4 py-1.5 bg-gradient-to-r from-primary-500 to-pink-500 text-white text-sm font-bold rounded-full shadow-lg">
+                    {planDetails.badge}
+                  </span>
+                </div>
+              )}
+
+              {isCurrentPlan && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="px-4 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">
+                    ✓ ACTIF
+                  </span>
+                </div>
+              )}
+
+              {/* Icône */}
+              <div
+                className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-6`}
+              >
+                <Icon className="w-7 h-7 text-white" />
+              </div>
+
+              {/* Nom du plan */}
+              <h3 className="text-3xl font-bold text-white mb-3">
+                {plan.name}
+              </h3>
+
+              {/* Prix */}
+              <div className="mb-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-5xl font-bold text-white">
+                    {displayAmount.toLocaleString()}
+                  </span>
+                  <span className="text-xl text-dark-400">F CFA</span>
+                </div>
+                <p className="text-dark-400 text-sm mt-2">
+                  {isAnnual ? (
+                    <>
+                      par an{" "}
+                      <span className="text-green-400 font-semibold">
+                        (soit {monthlyEquivalent?.toLocaleString()} F/mois)
+                      </span>
+                    </>
+                  ) : (
+                    `par ${intervalLabels[plan.interval] || plan.interval}`
+                  )}
+                </p>
+                {isAnnual && (
+                  <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
+                    <span className="text-green-400 text-xs font-semibold">
+                      ✨ Économisez 20% avec le paiement annuel
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Features */}
+              <div className="space-y-3 mb-8">
+                {planDetails.features.map((feature, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-dark-300 text-sm">{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bouton d'action */}
+              <Button
+                onClick={() => handleSubscribe(plan.id)}
+                disabled={isCurrentPlan || isSubscribing}
+                size="lg"
+                className={`w-full ${
                   isCurrentPlan
-                    ? "border-green-500/50"
-                    : planDetails.badge
-                    ? "border-primary-500/50"
-                    : "border-dark-800/50"
-                } hover:border-primary-500/50 transition-all duration-300 ${
-                  planDetails.badge ? "scale-105" : ""
+                    ? "bg-dark-800 cursor-not-allowed"
+                    : `bg-gradient-to-r ${gradient} hover:opacity-90 shadow-lg`
                 }`}
               >
-                {/* Badge populaire ou actif */}
-                {planDetails.badge && !isCurrentPlan && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="px-4 py-1.5 bg-gradient-to-r from-primary-500 to-pink-500 text-white text-sm font-bold rounded-full shadow-lg">
-                      {planDetails.badge}
-                    </span>
-                  </div>
+                {isSubscribing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Traitement...
+                  </>
+                ) : isCurrentPlan ? (
+                  "Plan actuel"
+                ) : (
+                  `Souscrire ${plan.name}`
                 )}
-
-                {isCurrentPlan && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="px-4 py-1.5 bg-green-500 text-white text-sm font-bold rounded-full shadow-lg">
-                      ✓ ACTIF
-                    </span>
-                  </div>
-                )}
-
-                {/* Icône */}
-                <div
-                  className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center mb-6`}
-                >
-                  <Icon className="w-7 h-7 text-white" />
-                </div>
-
-                {/* Nom du plan */}
-                <h3 className="text-3xl font-bold text-white mb-3">
-                  {plan.name}
-                </h3>
-
-                {/* Prix */}
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-bold text-white">
-                      {displayAmount.toLocaleString()}
-                    </span>
-                    <span className="text-xl text-dark-400">F CFA</span>
-                  </div>
-                  <p className="text-dark-400 text-sm mt-2">
-                    {isAnnual ? (
-                      <>
-                        par an{" "}
-                        <span className="text-green-400 font-semibold">
-                          (soit {monthlyEquivalent?.toLocaleString()} F/mois)
-                        </span>
-                      </>
-                    ) : (
-                      `par ${intervalLabels[plan.interval] || plan.interval}`
-                    )}
-                  </p>
-                  {isAnnual && (
-                    <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
-                      <span className="text-green-400 text-xs font-semibold">
-                        ✨ Économisez 20% avec le paiement annuel
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Features */}
-                <div className="space-y-3 mb-8">
-                  {planDetails.features.map((feature, idx) => (
-                    <div key={idx} className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-dark-300 text-sm">{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Bouton d'action */}
-                <Button
-                  onClick={() => handleSubscribe(plan.id)}
-                  disabled={isCurrentPlan || isSubscribing}
-                  size="lg"
-                  className={`w-full ${
-                    isCurrentPlan
-                      ? "bg-dark-800 cursor-not-allowed"
-                      : `bg-gradient-to-r ${gradient} hover:opacity-90 shadow-lg`
-                  }`}
-                >
-                  {isSubscribing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Traitement...
-                    </>
-                  ) : isCurrentPlan ? (
-                    "Plan actuel"
-                  ) : (
-                    `Souscrire ${plan.name}`
-                  )}
-                </Button>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Pas de plans */}
-        {plans.length === 0 && !loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12 bg-dark-900/30 backdrop-blur-xl rounded-2xl border border-dark-800/50 p-8"
-          >
-            <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-white mb-2">
-              Plans {billingCycle === "monthly" ? "mensuels" : "annuels"} non
-              disponibles
-            </h3>
-            <p className="text-dark-400 mb-4">
-              Les plans d'abonnement{" "}
-              {billingCycle === "monthly" ? "mensuels" : "annuels"} ne sont pas
-              encore configurés.
-            </p>
-            <button
-              onClick={() =>
-                setBillingCycle(
-                  billingCycle === "monthly" ? "annually" : "monthly"
-                )
-              }
-              className="px-6 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-            >
-              Voir les plans{" "}
-              {billingCycle === "monthly" ? "annuels" : "mensuels"}
-            </button>
-          </motion.div>
-        )}
-
-        {/* Section FAQ ou avantages */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mt-16 p-8 bg-dark-900/30 backdrop-blur-xl rounded-2xl border border-dark-800/50"
-        >
-          <h2 className="text-2xl font-bold text-white mb-6 text-center">
-            Tous les plans incluent
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              "Génération de livres IA illimitée",
-              "Génération d'images e-commerce",
-              "Génération de vidéos personnalisées",
-              "Génération d'articles de blog",
-              "Stockage cloud sécurisé",
-              "Support prioritaire",
-            ].map((feature, index) => (
-              <div key={index} className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
-                <span className="text-dark-300">{feature}</span>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+              </Button>
+            </motion.div>
+          );
+        })}
       </div>
-    </DashboardLayout>
+
+      {/* Pas de plans */}
+      {plans.length === 0 && !loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center py-12 bg-dark-900/30 backdrop-blur-xl rounded-2xl border border-dark-800/50 p-8"
+        >
+          <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-white mb-2">
+            Plans {billingCycle === "monthly" ? "mensuels" : "annuels"} non
+            disponibles
+          </h3>
+          <p className="text-dark-400 mb-4">
+            Les plans d'abonnement{" "}
+            {billingCycle === "monthly" ? "mensuels" : "annuels"} ne sont pas
+            encore configurés.
+          </p>
+          <button
+            onClick={() =>
+              setBillingCycle(
+                billingCycle === "monthly" ? "annually" : "monthly"
+              )
+            }
+            className="px-6 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Voir les plans {billingCycle === "monthly" ? "annuels" : "mensuels"}
+          </button>
+        </motion.div>
+      )}
+
+      {/* Section FAQ ou avantages */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="mt-16 p-8 bg-dark-900/30 backdrop-blur-xl rounded-2xl border border-dark-800/50"
+      >
+        <h2 className="text-2xl font-bold text-white mb-6 text-center">
+          Tous les plans incluent
+        </h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            "Génération de livres IA illimitée",
+            "Génération d'images e-commerce",
+            "Génération de vidéos personnalisées",
+            "Génération d'articles de blog",
+            "Stockage cloud sécurisé",
+            "Support prioritaire",
+          ].map((feature, index) => (
+            <div key={index} className="flex items-start gap-3">
+              <Check className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
+              <span className="text-dark-300">{feature}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Moyens de paiement */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="mt-12 text-center"
+      >
+        <p className="text-dark-400 text-sm mb-6 font-semibold">
+          Moyens de paiement acceptés
+        </p>
+        <div className="flex flex-wrap justify-center items-center gap-6">
+          <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+            <img
+              src="/assets/payments-imgs/VISA-Logo.png"
+              alt="Visa"
+              className="object-contain w-full h-full"
+            />
+          </div>
+          <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+            <img
+              src="/assets/payments-imgs/MasterCard_Logo.png"
+              alt="Mastercard"
+              className="object-contain w-full h-full"
+            />
+          </div>
+          <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+            <img
+              src="/assets/payments-imgs/Orange-Money-Logo.png"
+              alt="Orange Money"
+              className="object-contain w-full h-full"
+            />
+          </div>
+          <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+            <img
+              src="/assets/payments-imgs/mtn-mobile-money.png"
+              alt="MTN Mobile Money"
+              className="object-contain w-full h-full"
+            />
+          </div>
+          <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+            <img
+              src="/assets/payments-imgs/wave.png"
+              alt="Wave"
+              className="object-contain w-full h-full"
+            />
+          </div>
+        </div>
+        <p className="text-dark-500 text-xs mt-4">
+          Paiements sécurisés par Paystack
+        </p>
+      </motion.div>
+    </div>
   );
 }

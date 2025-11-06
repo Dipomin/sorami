@@ -20,6 +20,7 @@ import BlogPreview from "@/components/BlogPreview";
 import Newsletter from "@/components/Newsletter";
 import GeneratedImagesGallery from "@/components/GeneratedImagesGallery";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
+import Image from "next/image";
 
 const features = [
   {
@@ -70,19 +71,21 @@ const steps = [
 
 const pricingPlans = [
   {
-    name: "Gratuit",
-    price: "0 F",
-    period: "/ mois",
-    description: "Pour découvrir la plateforme",
+    name: "PACK CRÉATEUR",
+    price: "5 000 F",
+    period: "paiement unique",
+    description: "Parfait pour démarrer avec Sorami",
     features: [
-      "10 crédits d'essai",
-      "Génération d'images (watermark)",
-      "1 article de blog",
-      "Support communautaire",
+      "20 générations d'images haute qualité",
+      "2 articles de blog optimisés SEO",
+      "Valable à vie - Pas d'expiration",
+      "Stockage cloud sécurisé",
+      "Support par email",
     ],
-    cta: "Commencer gratuitement",
+    cta: "Acheter le Pack",
     highlighted: false,
     paystackPlanCode: null,
+    isOneTime: true,
   },
   {
     name: "STANDARD",
@@ -200,11 +203,7 @@ const HomePage = () => {
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.6 }}
               className="mb-8"
-            >
-              <h1 className="text-7xl md:text-8xl font-display font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-600 bg-clip-text text-transparent mb-4">
-                Sorami
-              </h1>
-            </motion.div>
+            ></motion.div>
 
             {/* Slogan */}
             <motion.h2
@@ -432,12 +431,20 @@ const HomePage = () => {
                 className={`relative rounded-2xl p-8 ${
                   plan.highlighted
                     ? "bg-gradient-to-br from-primary-900/50 to-accent-900/50 border-2 border-primary-500 shadow-glow-lg scale-105"
+                    : plan.isOneTime
+                    ? "bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border-2 border-emerald-500/50"
                     : "bg-dark-900/50 border border-dark-800/50"
                 } backdrop-blur-sm`}
               >
                 {plan.highlighted && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-violet px-4 py-1 rounded-full text-white text-sm font-semibold">
                     Le plus populaire
+                  </div>
+                )}
+
+                {plan.isOneTime && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-1 rounded-full text-white text-sm font-semibold">
+                    ⚡ PAIEMENT UNIQUE
                   </div>
                 )}
 
@@ -458,6 +465,11 @@ const HomePage = () => {
                         : plan.period}
                     </span>
                   </div>
+                  {plan.isOneTime && (
+                    <p className="text-emerald-400 text-sm font-semibold mt-2">
+                      🎯 Aucun abonnement - Achetez une fois, utilisez à vie
+                    </p>
+                  )}
                   {plan.paystackPlanCode && billingCycle === "annually" && (
                     <p className="text-green-400 text-sm font-semibold">
                       soit {getPlanPrice(plan.price).monthlyEquivalent}
@@ -484,10 +496,22 @@ const HomePage = () => {
                 <Button
                   //asChild
                   onClick={() => {
-                    window.location.href = "/dashboard";
+                    window.location.href = plan.isOneTime
+                      ? "/pricing"
+                      : "/dashboard";
                   }}
-                  variant={plan.highlighted ? "glow" : "outline"}
-                  className="w-full"
+                  variant={
+                    plan.highlighted
+                      ? "glow"
+                      : plan.isOneTime
+                      ? "default"
+                      : "outline"
+                  }
+                  className={`w-full ${
+                    plan.isOneTime
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:opacity-90 shadow-lg text-white"
+                      : ""
+                  }`}
                   size="lg"
                 >
                   {plan.cta}
@@ -496,12 +520,66 @@ const HomePage = () => {
             ))}
           </div>
 
+          {/* Payment methods */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-16 text-center"
+          >
+            <p className="text-dark-400 text-sm mb-6 font-semibold">
+              Moyens de paiement acceptés
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-6">
+              <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+                <Image
+                  src="/assets/payments-imgs/VISA-Logo.png"
+                  alt="Visa"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+                <Image
+                  src="/assets/payments-imgs/MasterCard_Logo.png"
+                  alt="Mastercard"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+                <Image
+                  src="/assets/payments-imgs/Orange-Money-Logo.png"
+                  alt="Orange Money"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+                <Image
+                  src="/assets/payments-imgs/mtn-mobile-money.png"
+                  alt="MTN Mobile Money"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <div className="relative w-20 h-12 grayscale hover:grayscale-0 transition-all duration-300 opacity-70 hover:opacity-100">
+                <Image
+                  src="/assets/payments-imgs/wave.png"
+                  alt="Wave"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            </div>
+          </motion.div>
+
           {/* Trust badges */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="mt-16 flex flex-wrap justify-center gap-8 items-center text-dark-400"
+            className="mt-12 flex flex-wrap justify-center gap-8 items-center text-dark-400"
           >
             <div className="flex items-center gap-2">
               <Shield className="w-5 h-5" />
