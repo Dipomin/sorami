@@ -1,9 +1,9 @@
+/* React Image Crop Styles - Must be imported FIRST before ALL other rules */
+@import "react-image-crop/dist/ReactCrop.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* React Image Crop Styles - Must be imported before other rules */
-@import "react-image-crop/dist/ReactCrop.css";
 
 /* Variables CSS personnalisées - Thème Sombre */
 @layer base {
