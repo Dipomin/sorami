@@ -144,12 +144,21 @@ jobs:
             echo "✅ Node.js $(node -v) found"
             echo "✅ npm $(npm -v) found"
             
-            echo "�📥 Pulling latest changes..."
+            echo " Pulling latest changes..."
             git fetch origin
             git pull origin main
             
+            echo "🔧 Fixing permissions if needed..."
+            # Fix permissions for node_modules if it exists
+            if [ -d "node_modules" ]; then
+                sudo chown -R $(whoami):$(whoami) node_modules || true
+                sudo chmod -R u+w node_modules || true
+            fi
+            
             echo "🔧 Installing dependencies..."
-            npm ci --production=false
+            # Clean install with proper flags
+            rm -rf node_modules package-lock.json || true
+            npm install --legacy-peer-deps
             
             echo "🗄️ Running Prisma migrations..."
             npx prisma generate
