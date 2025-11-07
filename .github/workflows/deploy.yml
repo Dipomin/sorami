@@ -149,12 +149,12 @@ jobs:
             git pull origin main
             
             echo "🔧 Fixing permissions if needed..."
-            # Fix permissions and clean directories with sudo
+            # Fix permissions and clean directories (sudo configured without password)
             echo "🧹 Cleaning build directories..."
-            sudo rm -rf node_modules .next package-lock.json || true
+            sudo rm -rf node_modules .next package-lock.json 2>/dev/null || rm -rf node_modules .next package-lock.json
             
             echo "🔓 Ensuring correct ownership..."
-            sudo chown -R $(whoami):$(whoami) . || true
+            sudo chown -R $(whoami):$(whoami) . 2>/dev/null || true
             
             echo "🔧 Installing dependencies..."
             # Clean install with proper flags
