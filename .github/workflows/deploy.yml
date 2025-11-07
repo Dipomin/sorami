@@ -128,7 +128,23 @@ jobs:
             echo "📂 Navigating to app directory..."
             cd /home/sorami/sorami
             
-            echo "📥 Pulling latest changes..."
+            echo "� Checking Node.js installation..."
+            if ! command -v node &> /dev/null; then
+                echo "❌ ERROR: Node.js is not installed on the VPS!"
+                echo "📝 Please run the following commands on the VPS:"
+                echo "   1. ssh into the VPS"
+                echo "   2. curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -"
+                echo "   3. sudo apt-get install -y nodejs"
+                echo "   4. sudo npm install -g pm2"
+                echo ""
+                echo "Or download and run: setup-nodejs-vps.sh"
+                exit 1
+            fi
+            
+            echo "✅ Node.js $(node -v) found"
+            echo "✅ npm $(npm -v) found"
+            
+            echo "�📥 Pulling latest changes..."
             git fetch origin
             git pull origin main
             
