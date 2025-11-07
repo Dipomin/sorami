@@ -10,7 +10,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 
 // Disable static generation for this page (requires authentication)
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function BlogPage() {
   const { blogs, loading, error, refetch } = useBlogs();
