@@ -5,19 +5,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-admin';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 
-// Configuration S3
-const s3Client = new S3Client({
+// Configuration S3 pour le blog (credentials dédiées)
+const s3BlogClient = new S3Client({
   region: process.env.AWS_REGION || 'eu-north-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+    accessKeyId: process.env.AWS_BLOG_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_BLOG_SECRET_ACCESS_KEY!,
   },
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'sorami-generated-content-9872';
+// Utiliser le bucket PUBLIC pour les images de blog
+const BLOG_BUCKET_NAME = process.env.AWS_S3_BLOG_BUCKET_NAME || 'sorami-blog';
 
 // Configuration pour les uploads
 export const runtime = 'nodejs';
@@ -88,19 +89,19 @@ export async function POST(request: NextRequest) {
     const extension = contentType === 'image/webp' ? 'webp' : file.name.split('.').pop();
     const fileName = `blog/images/${timestamp}-${randomString}.${extension}`;
 
-    // Upload vers S3
+    // Upload vers S3 (bucket public)
     const uploadCommand = new PutObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: BLOG_BUCKET_NAME,
       Key: fileName,
       Body: processedBuffer,
       ContentType: contentType,
       CacheControl: 'public, max-age=31536000', // 1 an de cache
     });
 
-    await s3Client.send(uploadCommand);
+    await s3BlogClient.send(uploadCommand);
 
-    // Construire l'URL publique
-    const publicUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${fileName}`;
+    // Construire l'URL publique directe
+    const publicUrl = `https://${BLOG_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${fileName}`;
 
     return NextResponse.json({
       url: publicUrl,
@@ -154,13 +155,13 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Supprimer de S3
-    const deleteCommand = new PutObjectCommand({
-      Bucket: BUCKET_NAME,
+    // Supprimer de S3 (bucket public blog)
+    const deleteCommand = new DeleteObjectCommand({
+      Bucket: BLOG_BUCKET_NAME,
       Key: fileName,
     });
 
-    await s3Client.send(deleteCommand);
+    await s3BlogClient.send(deleteCommand);
 
     return NextResponse.json(
       { message: 'Image deleted successfully' },

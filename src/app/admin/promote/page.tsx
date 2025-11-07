@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
+// Disable static generation for this page (requires authentication)
+export const dynamic = "force-dynamic";
+
 /**
  * Page de développement pour promouvoir des utilisateurs au rôle ADMIN
  * ⚠️ À supprimer ou sécuriser en production

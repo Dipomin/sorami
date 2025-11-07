@@ -4,13 +4,12 @@
  */
 
 import { MetadataRoute } from 'next';
-import { prisma } from '@/lib/prisma';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sorami.app';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Pages statiques
-  const staticPages = [
+  const staticPages: MetadataRoute.Sitemap = [
     {
       url: SITE_URL,
       lastModified: new Date(),
@@ -43,7 +42,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
+  // Skip database queries during build if DATABASE_URL is not available
+  if (!process.env.DATABASE_URL) {
+    console.warn('⚠️ DATABASE_URL not found - skipping dynamic blog posts in sitemap');
+    return staticPages;
+  }
+
   try {
+    // Lazy import Prisma only when DATABASE_URL is available
+    const { prisma } = await import('@/lib/prisma');
+    
     // Récupérer tous les articles publiés
     const posts = await prisma.blogPost.findMany({
       where: {

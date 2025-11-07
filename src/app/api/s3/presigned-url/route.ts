@@ -30,6 +30,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Log pour débogage
+    console.log('Generating presigned URL for:', {
+      bucket: BUCKET_NAME,
+      key: key,
+      region: process.env.AWS_REGION || 'eu-north-1',
+    });
+
     // Générer URL présignée valide pour 1 heure
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
@@ -46,10 +53,18 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error generating presigned URL:', error);
+    console.error('Error generating presigned URL:', {
+      error: error.message,
+      code: error.code,
+      name: error.name,
+    });
     
     return NextResponse.json(
-      { error: 'Failed to generate presigned URL', details: error.message },
+      { 
+        error: 'Failed to generate presigned URL', 
+        details: error.message,
+        code: error.code 
+      },
       { status: 500 }
     );
   }

@@ -146,6 +146,9 @@
   }
 }
 
+/* React Image Crop Styles */
+@import "react-image-crop/dist/ReactCrop.css";
+
 /* Animations et keyframes */
 @keyframes fadeIn {
   from {

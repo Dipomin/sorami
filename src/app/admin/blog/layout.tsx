@@ -4,8 +4,7 @@
  */
 
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth-admin";
-import { redirect } from "next/navigation";
+import Image from "next/image";
 
 export default async function AdminBlogLayout({
   children,
@@ -28,14 +27,17 @@ export default async function AdminBlogLayout({
         {/* Sidebar */}
         <aside className="w-64 min-h-screen bg-slate-900/50 backdrop-blur-sm border-r border-slate-800">
           <div className="p-6">
-            <Link
-              href="/dashboard"
-              className="flex items-center space-x-2 mb-8"
-            >
-              <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">S</span>
-              </div>
-              <span className="text-white font-semibold">Sorami</span>
+            <Link href="/admin/blog" className="flex items-center space-x-3 group">
+              
+              <h1 className="font-display font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-600 bg-clip-text text-transparent mb-4">
+                <Image
+                  src="/assets/logo-sorami.png"
+                  alt="Sorami Logo"
+                  width={170}
+                  height={70}
+                  className="mx-auto"
+                />
+              </h1>
             </Link>
 
             <nav className="space-y-2">

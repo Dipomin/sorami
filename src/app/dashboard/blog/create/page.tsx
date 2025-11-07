@@ -18,6 +18,9 @@ import { useBlogJob } from "../../../../hooks/useBlogJob";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 
+// Disable static generation for this page (requires authentication)
+export const dynamic = "force-dynamic";
+
 export default function CreateBlogPage() {
   const router = useRouter();
   const { isLoading, error, jobId, createBlog, clearError } = useBlogCreation();

@@ -147,7 +147,7 @@ export default function PrivacyPage() {
                 href="mailto:privacy@sorami.ai"
                 className="text-primary-400 hover:text-primary-300"
               >
-                privacy@sorami.ai
+                privacy@sorami.app
               </a>
             </p>
           </section>

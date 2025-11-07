@@ -23,8 +23,8 @@ export async function requireAdmin() {
 
   console.log('requireAdmin - user role:', user.role);
 
-  // Vérifier le rôle ADMIN
-  if (user.role !== 'ADMIN') {
+  // Vérifier le rôle ADMIN ou SUPER_ADMIN
+  if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
     throw new Error('Forbidden - Admin access required');
   }
 

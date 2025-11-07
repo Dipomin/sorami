@@ -11,6 +11,7 @@ import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useBlogCategories } from "@/hooks/useBlogCategories";
 import { motion } from "framer-motion";
+import { S3ImageManager } from "@/components/admin/S3ImageManager";
 
 // Import dynamique de l'éditeur Markdown (CSR only)
 const MDEditor = dynamic(
@@ -43,6 +44,7 @@ export default function BlogEditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isImageManagerOpen, setIsImageManagerOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState<"content" | "settings" | "seo">(
     "content"
   );
@@ -311,22 +313,12 @@ export default function BlogEditorPage() {
                 />
               )}
               <div className="flex-1">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={isUploading}
-                  className="hidden"
-                  id="cover-upload"
-                />
-                <label
-                  htmlFor="cover-upload"
-                  className={`inline-block px-6 py-3 bg-slate-700 text-white rounded-lg cursor-pointer hover:bg-slate-600 transition-colors ${
-                    isUploading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                <button
+                  onClick={() => setIsImageManagerOpen(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-700 hover:to-indigo-700 transition-all shadow-lg"
                 >
-                  {isUploading ? "Upload..." : "Choisir une image"}
-                </label>
+                  Gérer les images
+                </button>
               </div>
             </div>
           </div>
@@ -573,6 +565,16 @@ export default function BlogEditorPage() {
           </div>
         </motion.div>
       )}
+
+      {/* Image Manager Modal */}
+      <S3ImageManager
+        isOpen={isImageManagerOpen}
+        onClose={() => setIsImageManagerOpen(false)}
+        onSelect={(imageUrl) => {
+          setFormData((prev) => ({ ...prev, coverImage: imageUrl }));
+        }}
+        currentImage={formData.coverImage}
+      />
     </div>
   );
 }

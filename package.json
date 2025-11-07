@@ -51,6 +51,7 @@
     "openai": "^6.5.0",
     "react": "latest",
     "react-dom": "latest",
+    "react-image-crop": "^11.0.10",
     "react-markdown": "^10.1.0",
     "reading-time": "^1.5.0",
     "sharp": "^0.34.4",

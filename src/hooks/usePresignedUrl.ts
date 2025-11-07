@@ -27,6 +27,7 @@ export function usePresignedUrl(s3Key: string | null | undefined) {
   useEffect(() => {
     if (!s3Key) {
       setPresignedUrl(null);
+      setIsLoading(false);
       return;
     }
 
@@ -34,6 +35,7 @@ export function usePresignedUrl(s3Key: string | null | undefined) {
     const cached = urlCache[s3Key];
     if (cached && cached.expiresAt > Date.now()) {
       setPresignedUrl(cached.url);
+      setIsLoading(false);
       return;
     }
 
@@ -43,10 +45,15 @@ export function usePresignedUrl(s3Key: string | null | undefined) {
       setError(null);
 
       try {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Fetching presigned URL for key:', s3Key);
+        }
+
         const response = await fetch(`/api/s3/presigned-url?key=${encodeURIComponent(s3Key)}`);
         
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`HTTP ${response.status}: ${errorData.error || 'Failed to fetch presigned URL'}`);
         }
 
         const data: PresignedUrlResponse = await response.json();
@@ -59,8 +66,12 @@ export function usePresignedUrl(s3Key: string | null | undefined) {
         };
 
         setPresignedUrl(data.url);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Presigned URL generated successfully for:', s3Key);
+        }
       } catch (err: any) {
-        console.error('Error fetching presigned URL:', err);
+        console.error('Error fetching presigned URL for key:', s3Key, err);
         setError(err.message);
         setPresignedUrl(null);
       } finally {

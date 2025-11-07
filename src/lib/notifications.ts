@@ -159,4 +159,135 @@ export async function sendSubscriptionEmail(email: string, subscription: {
   return sendNotification(email, subject, html);
 }
 
-export default { sendNotification, sendInvoiceEmail, sendSubscriptionEmail };
+export async function sendContactEmail(contact: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER;
+  
+  if (!adminEmail) {
+    console.error('❌ ADMIN_EMAIL non configuré');
+    return false;
+  }
+
+  const subject = `[Contact Sorami] ${contact.subject}`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .contact-info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #8b5cf6; }
+        .info-row { padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row:last-child { border-bottom: none; }
+        .label { font-weight: bold; color: #6b7280; display: inline-block; width: 100px; }
+        .message-box { background: #f3f4f6; padding: 20px; border-radius: 8px; margin-top: 20px; white-space: pre-wrap; }
+        .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+        .reply-button { display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>📧 Nouveau message de contact</h1>
+          <p>Sorami Contact Form</p>
+        </div>
+        <div class="content">
+          <div class="contact-info">
+            <h3>Informations du contact</h3>
+            <div class="info-row">
+              <span class="label">Nom :</span>
+              <span>${contact.name}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">Email :</span>
+              <span><a href="mailto:${contact.email}">${contact.email}</a></span>
+            </div>
+            <div class="info-row">
+              <span class="label">Sujet :</span>
+              <span>${contact.subject}</span>
+            </div>
+          </div>
+
+          <h3>Message :</h3>
+          <div class="message-box">
+${contact.message}
+          </div>
+
+          <center>
+            <a href="mailto:${contact.email}?subject=Re: ${encodeURIComponent(contact.subject)}" class="reply-button">
+              Répondre à ${contact.name}
+            </a>
+          </center>
+        </div>
+        <div class="footer">
+          <p>Ce message a été envoyé via le formulaire de contact de Sorami</p>
+          <p>Date : ${new Date().toLocaleString('fr-FR', { timeZone: 'Africa/Abidjan' })}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Envoyer à l'administrateur
+  const adminNotification = await sendNotification(adminEmail, subject, html);
+
+  // Envoyer une confirmation à l'utilisateur
+  const userConfirmationSubject = 'Votre message a bien été reçu - Sorami';
+  const userConfirmationHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px; }
+        .message-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+        .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>✅ Message Reçu</h1>
+          <p>Merci de nous avoir contactés !</p>
+        </div>
+        <div class="content">
+          <p>Bonjour ${contact.name},</p>
+          <p>Nous avons bien reçu votre message et nous vous remercions de l'intérêt que vous portez à Sorami.</p>
+          
+          <div class="message-box">
+            <h3>Récapitulatif de votre message :</h3>
+            <p><strong>Sujet :</strong> ${contact.subject}</p>
+            <p><strong>Message :</strong></p>
+            <p style="white-space: pre-wrap;">${contact.message}</p>
+          </div>
+
+          <p>Notre équipe vous répondra dans les plus brefs délais, généralement sous 24 heures ouvrées.</p>
+          <p>En attendant, n'hésitez pas à découvrir nos fonctionnalités sur <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://sorami.app'}">sorami.app</a>.</p>
+          
+          <p>Cordialement,<br><strong>L'équipe Sorami</strong></p>
+        </div>
+        <div class="footer">
+          <p>Cet email a été envoyé automatiquement. Pour toute question urgente, contactez-nous à ${adminEmail}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const userConfirmation = await sendNotification(contact.email, userConfirmationSubject, userConfirmationHtml);
+
+  // Retourner true si au moins l'email admin a été envoyé
+  return adminNotification;
+}
+
+export default { sendNotification, sendInvoiceEmail, sendSubscriptionEmail, sendContactEmail };

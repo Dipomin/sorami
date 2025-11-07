@@ -8,9 +8,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser } from '@/lib/auth';
+import { checkAdminPermissions } from '@/lib/admin-api-middleware';
 
 export async function POST(request: NextRequest) {
+  // Vérifier les permissions admin
+  const adminCheck = await checkAdminPermissions();
+  if (!adminCheck.success) {
+    return adminCheck.response;
+  }
+
+  const adminUser = adminCheck.user;
+  console.log(`[Admin Promote] Opération initiée par ${adminUser.email}`);
+
   // ⚠️ Vérification environnement de développement
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
@@ -30,15 +39,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que l'utilisateur est connecté
-    const currentUser = await getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json(
-        { error: 'Authentification requise' },
-        { status: 401 }
-      );
-    }
-
     let updatedUser;
 
     if (action === 'promote') {
@@ -55,7 +55,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`✅ Utilisateur ${email} promu au rôle ADMIN par ${currentUser.email}`);
     } else if (action === 'demote') {
       // Rétrograder au rôle USER
       updatedUser = await prisma.user.update({
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log(`✅ Utilisateur ${email} rétrogradé au rôle USER par ${currentUser.email}`);
     } else {
       return NextResponse.json(
         { error: 'Action invalide. Utilisez "promote" ou "demote"' },

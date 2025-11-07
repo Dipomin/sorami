@@ -4,7 +4,9 @@
 
 Next.js 15 (App Router) **multi-tenant SaaS** for AI content generation (books, blogs, images, videos) with Clerk auth, Prisma ORM (MySQL), AWS S3 storage, and CrewAI backend integration.
 
-**Core Stack**: Next.js 15 + TypeScript + Tailwind + Prisma + Clerk + AWS S3 + Framer Motion
+**Core Stack**: Next.js 15 + TypeScript + Tailwind + Prisma + Clerk + AWS S3 + Framer Motion + Paystack
+
+**Key Features**: Book generation, blog creation, image/video generation, credit-based billing, multi-organization support
 
 ## Critical Architecture Patterns
 
@@ -36,18 +38,26 @@ const books = await prisma.book.findMany({
 
 ```typescript
 // Server-side API routes (REQUIRED pattern)
-import { requireAuth } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
-  const user = await requireAuth(); // Throws if unauthenticated
-  // user includes organizationMemberships with full data
+  const user = await getCurrentUser(); // Returns user with organizationMemberships
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  // user includes organizationMemberships with full organization data
 }
 ```
 
+**Authentication Flow**:
+- `getCurrentUser()` auto-creates users from Clerk data if missing in Prisma DB
+- Always check for user existence before proceeding with operations
+- User sync happens automatically on first access, not just via webhook
+
 **Middleware Protection** (`middleware.ts`):
-- Protected: `/create`, `/books`, `/blog`, `/jobs`, `/dashboard`, `/generate-*`
-- Public: `/`, `/sign-in`, `/sign-up`, `/api/webhooks/*`
-- Clerk webhook at `/api/webhooks/clerk` syncs users to Prisma DB
+- Protected: `/create`, `/books`, `/blog`, `/jobs`, `/dashboard`, `/generate-*`, `/admin`
+- Public: `/`, `/sign-in`, `/sign-up`, `/api/webhooks/*`, `/blog/*` (read-only)
+- Webhook routes: `/api/webhooks/{clerk,book-completion,blog-completion,image-completion,video-completion}`
 
 ### 3. Dual API Architecture
 
@@ -121,7 +131,45 @@ const fileInfo = await uploadBookFile({
 
 **S3 Organization**: `books/{bookId}/{timestamp}.{format}`, `images/`, `videos/`
 
-### 6. React Hooks Conventions
+### 7. Credit System (Core SaaS Logic)
+
+```typescript
+import { deductCredits, CREDIT_COSTS } from '@/lib/credits'
+
+// Before starting AI generation, always check and deduct credits
+const result = await deductCredits({
+  userId: user.id,
+  contentType: 'BOOK', // 'IMAGE' | 'VIDEO' | 'BLOG' | 'BOOK' | 'IMAGE_ECOMMERCE' | 'VIDEO_CUSTOM'
+  quantity: 1,
+  metadata: { feature: 'book-generation', title: bookData.title }
+});
+
+if (!result.success) {
+  return NextResponse.json({ error: 'Insufficient credits' }, { status: 402 });
+}
+```
+
+**Credit Costs** (defined in `CREDIT_COSTS`):
+- Images: 1 credit each | Videos: 5 credits | Blogs: 2 credits | Books: 10 credits
+- E-commerce images: 2 credits | Custom videos: 8 credits
+
+### 8. Paystack Integration (West Africa Focus)
+
+```typescript
+import { initializeTransaction, verifyTransaction } from '@/lib/paystack'
+
+// Initialize payment (amounts in XOF - West African CFA Franc)
+const { body } = await initializeTransaction({
+  amount: 5000, // 5000 XOF = 50 FCFA
+  email: user.email,
+  metadata: { userId: user.id, plan: 'pack-createur' }
+});
+```
+
+**Currency**: XOF (West African CFA Franc), amounts multiplied by 100 for Paystack API
+**Key Plans**: Free tier, Pack Créateur (paid tier with more credits)
+
+### 9. React Hooks Conventions
 
 ```typescript
 // Standard naming: use{Feature}{Action}
@@ -192,8 +240,8 @@ CLERK_SECRET_KEY="sk_test_..."
 # Storage (AWS S3)
 AWS_ACCESS_KEY_ID="..."
 AWS_SECRET_ACCESS_KEY="..."
-AWS_REGION="us-east-1"
-AWS_S3_BUCKET_NAME="sorami-storage"
+AWS_REGION="eu-north-1"
+AWS_S3_BUCKET_NAME="sorami-generated-content-9872"
 
 # Backend Integration
 NEXT_PUBLIC_API_URL="http://localhost:9006"  # CrewAI backend
@@ -226,11 +274,13 @@ src/
 │   ├── generate-images/    # Image generation
 │   └── generate-videos/    # Video generation
 ├── lib/
-│   ├── auth.ts             # requireAuth, getCurrentUser
+│   ├── auth.ts             # getCurrentUser, requireAuth
 │   ├── prisma.ts           # Singleton Prisma client
 │   ├── api-server.ts       # Server-side API (Prisma types)
 │   ├── api-client.ts       # Client-side API (fetch)
 │   ├── s3-storage.ts       # S3 upload/download
+│   ├── credits.ts          # Credit system & CREDIT_COSTS
+│   ├── paystack.ts         # Payment integration
 │   └── types.ts            # Prisma extended types
 ├── types/                  # API contract types (client)
 ├── hooks/                  # React hooks (use* pattern)
@@ -243,9 +293,10 @@ src/
 
 1. **Database**: Update `schema.prisma` → `prisma generate` → `prisma db push`
 2. **Types**: Add to `src/lib/types.ts` (Prisma) AND `src/types/*.ts` (API)
-3. **API Route**: Use `requireAuth()`, proper error handling, `NextResponse.json()`
+3. **API Route**: Use `getCurrentUser()`, proper error handling, `NextResponse.json()`
 4. **Hook**: Follow `use{Feature}` pattern with loading/error states
-5. **Webhook**: Implement idempotency + secret validation + atomic transactions
-6. **UI**: Tailwind classes only, Framer Motion for animations
+5. **Credits**: Always deduct credits before AI generation using `deductCredits()`
+6. **Webhook**: Implement idempotency + secret validation + atomic transactions
+7. **UI**: Tailwind classes only, Framer Motion for animations
 
 **Always check existing patterns in similar features before implementing new ones.**

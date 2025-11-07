@@ -6,6 +6,9 @@ import { motion } from "framer-motion";
 import { Home, ArrowLeft, Search, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Disable static generation for this page
+export const dynamic = "force-dynamic";
+
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-dark flex items-center justify-center p-6">

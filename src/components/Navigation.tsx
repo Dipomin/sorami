@@ -13,7 +13,7 @@ import {
   Video,
   FileText,
   BookOpen,
-  Image,
+  //Image,
   Zap,
   Users,
   Settings,
@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MobileMenu from "@/components/MobileMenu";
-import NotificationCenter from "@/components/NotificationCenter";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface NavigationProps {
@@ -82,7 +82,7 @@ const publicNavItems = [
   { href: "/", label: "Accueil" },
   { href: "/blog", label: "Blog" },
   { href: "/#features", label: "Fonctionnalités" },
-  { href: "/#pricing", label: "Tarifs" },
+  { href: "/pricing", label: "Tarifs" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -118,6 +118,8 @@ const Navigation: React.FC<NavigationProps> = ({ className = "" }) => {
   }
 
   const isDashboardPage = pathname?.startsWith("/dashboard");
+  const isAdminPage = pathname?.startsWith("/admin");
+  const isProtectedPage = isDashboardPage || isAdminPage;
 
   return (
     <>
@@ -132,31 +134,37 @@ const Navigation: React.FC<NavigationProps> = ({ className = "" }) => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3 group">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-primary-500 to-accent-500 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
-                Sorami
-              </span>
+              
+              <h1 className="font-display font-bold bg-gradient-to-r from-primary-400 via-accent-400 to-primary-600 bg-clip-text text-transparent mb-4">
+                <Image
+                  src="/assets/logo-sorami.png"
+                  alt="Sorami Logo"
+                  width={170}
+                  height={70}
+                  className="mx-auto"
+                />
+              </h1>
             </Link>
 
-            {/* Navigation publique (desktop) */}
-            <div className="hidden lg:flex items-center space-x-8">
-              {publicNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "text-sm font-medium transition-colors duration-200",
-                    pathname === item.href
-                      ? "text-primary-400"
-                      : "text-dark-300 hover:text-white"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            {/* Navigation publique (desktop) - Affichée uniquement sur les pages publiques */}
+            {!isProtectedPage && (
+              <div className="hidden lg:flex items-center space-x-8">
+                {publicNavItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "text-sm font-medium transition-colors duration-200",
+                      pathname === item.href
+                        ? "text-primary-400"
+                        : "text-dark-300 hover:text-white"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* Actions utilisateur */}
             <div className="flex items-center space-x-4">

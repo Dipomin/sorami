@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { Clock, ArrowRight, Eye, User, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BlogPost } from "@/hooks/useBlogPosts";
+import { BlogCoverImage } from "@/components/ui/BlogImage";
 
 interface BlogPreviewProps {
   posts: BlogPost[];
@@ -88,74 +89,102 @@ const BlogPreview: React.FC<BlogPreviewProps> = ({ posts }) => {
               className="group relative"
             >
               <Link href={`/blog/${post.slug}`}>
-                <div className="relative h-full p-6 rounded-3xl bg-dark-900/50 backdrop-blur-sm border border-dark-700/50 hover:border-primary-500/50 transition-all duration-300 group-hover:transform group-hover:scale-[1.02]">
-                  {/* Category Badge */}
-                  {post.category && (
-                    <div className="mb-4">
-                      <span
-                        className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white"
-                        style={{
-                          backgroundColor: getCategoryColor(post.category),
-                        }}
-                      >
-                        {post.category}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Title */}
-                  <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-primary-400 transition-colors duration-300 line-clamp-2">
-                    {post.title}
-                  </h3>
-
-                  {/* Excerpt */}
-                  {post.excerpt && (
-                    <p className="text-dark-300 mb-4 line-clamp-3 leading-relaxed">
-                      {post.excerpt}
-                    </p>
-                  )}
-
-                  {/* Meta Info */}
-                  <div className="flex items-center justify-between text-sm text-dark-400 mb-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <User className="w-4 h-4" />
-                        <span>{post.author.name || "Équipe Sorami"}</span>
-                      </div>
-                      {post.readingTime && (
-                        <div className="flex items-center space-x-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{post.readingTime} min</span>
-                        </div>
-                      )}
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{post.viewsCount.toLocaleString()}</span>
-                      </div>
-                      {post._count?.comments && (
-                        <div className="flex items-center space-x-1">
-                          <MessageCircle className="w-4 h-4" />
-                          <span>{post._count.comments}</span>
+                <div className="relative h-full rounded-3xl bg-dark-900/50 backdrop-blur-sm border border-dark-700/50 hover:border-primary-500/50 transition-all duration-300 group-hover:transform group-hover:scale-[1.02] overflow-hidden">
+                  {/* Image de couverture */}
+                  {post.coverImage && (
+                    <div className="h-48 relative overflow-hidden">
+                      <BlogCoverImage
+                        src={post.coverImage}
+                        alt={post.title}
+                        className="w-full h-full group-hover:scale-105 transition-transform duration-300"
+                      />
+                      {/* Overlay catégorie sur l'image */}
+                      {post.category && (
+                        <div className="absolute top-4 left-4">
+                          <span
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white backdrop-blur-sm"
+                            style={{
+                              backgroundColor:
+                                getCategoryColor(post.category) + "E6",
+                            }}
+                          >
+                            {post.category}
+                          </span>
                         </div>
                       )}
                     </div>
-                  </div>
+                  )}
 
-                  {/* Date */}
-                  <div className="text-sm text-dark-500 mb-4">
-                    {post.publishedAt
-                      ? formatDate(post.publishedAt)
-                      : formatDate(post.createdAt)}
-                  </div>
+                  {/* Contenu */}
+                  <div className="p-6">
+                    {/* Category Badge (si pas d'image) */}
+                    {!post.coverImage && post.category && (
+                      <div className="mb-4">
+                        <span
+                          className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white"
+                          style={{
+                            backgroundColor: getCategoryColor(post.category),
+                          }}
+                        >
+                          {post.category}
+                        </span>
+                      </div>
+                    )}
 
-                  {/* Read More Link */}
-                  <div className="flex items-center text-primary-400 group-hover:text-primary-300 transition-colors duration-300">
-                    <span className="font-medium">Lire la suite</span>
-                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                  </div>
+                    {/* Title */}
+                    <h3 className="text-xl font-semibold text-white mb-3 group-hover:text-primary-400 transition-colors duration-300 line-clamp-2">
+                      {post.title}
+                    </h3>
 
-                  {/* Gradient Hover Effect */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-3xl bg-gradient-to-br from-primary-500 to-accent-500 pointer-events-none" />
+                    {/* Excerpt */}
+                    {post.excerpt && (
+                      <p className="text-dark-300 mb-4 line-clamp-3 leading-relaxed">
+                        {post.excerpt}
+                      </p>
+                    )}
+
+                    {/* Meta Info */}
+                    <div className="flex items-center justify-between text-sm text-dark-400 mb-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <User className="w-4 h-4" />
+                          <span>{post.author.name || "Équipe Sorami"}</span>
+                        </div>
+                        {post.readingTime && (
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{post.readingTime} min</span>
+                          </div>
+                        )}
+                        <div className="flex items-center space-x-1">
+                          <Eye className="w-4 h-4" />
+                          <span>{post.viewsCount.toLocaleString()}</span>
+                        </div>
+                        {post._count?.comments && (
+                          <div className="flex items-center space-x-1">
+                            <MessageCircle className="w-4 h-4" />
+                            <span>{post._count.comments}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div className="text-sm text-dark-500 mb-4">
+                      {post.publishedAt
+                        ? formatDate(post.publishedAt)
+                        : formatDate(post.createdAt)}
+                    </div>
+
+                    {/* Read More Link */}
+                    <div className="flex items-center text-primary-400 group-hover:text-primary-300 transition-colors duration-300">
+                      <span className="font-medium">Lire la suite</span>
+                      <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                    </div>
+
+                    {/* Gradient Hover Effect */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-3xl bg-gradient-to-br from-primary-500 to-accent-500 pointer-events-none" />
+                  </div>
                 </div>
               </Link>
             </motion.article>

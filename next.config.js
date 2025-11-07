@@ -22,6 +22,16 @@ const nextConfig = {
         hostname: '**.amazonaws.com', // AWS S3
       },
     ],
+    // Configuration pour les images locales avec query strings (Next.js 16+)
+    localPatterns: [
+      {
+        pathname: '/api/generated-images',
+        search: '', // Permet tous les query strings
+      },
+      {
+        pathname: '/assets/**',
+      }
+    ],
   },
   
   // Variables d'environnement exposées au client

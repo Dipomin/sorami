@@ -3,16 +3,26 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { prisma } from './prisma'
 
-// Configuration S3
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
+// Configuration S3 pour les livres (utilisateur adm-sora)
+export const s3Client = new S3Client({
+  region: process.env.AWS_REGION || 'eu-north-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || 'placeholder',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || 'placeholder'
   }
 })
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET || 'sorami-storage'
+// Configuration S3 pour le blog (utilisateur adm-sora-blog)
+export const s3BlogClient = new S3Client({
+  region: process.env.AWS_REGION || 'eu-north-1',
+  credentials: {
+    accessKeyId: process.env.AWS_BLOG_ACCESS_KEY_ID || 'placeholder',
+    secretAccessKey: process.env.AWS_BLOG_SECRET_ACCESS_KEY || 'placeholder'
+  }
+})
+
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'sorami-generated-content-9872'
+const BLOG_BUCKET_NAME = process.env.AWS_S3_BLOG_BUCKET_NAME || 'sorami-blog'
 
 // Types
 export interface BookFileUpload {
@@ -248,4 +258,83 @@ export async function getStorageUsage(organizationId: string): Promise<{ totalBy
     console.error('Erreur calcul usage stockage:', error)
     return { totalBytes: 0, fileCount: 0 }
   }
+}
+
+// ============================================================================
+// FONCTIONS POUR BLOG (Bucket Public)
+// ============================================================================
+
+export interface BlogImageUpload {
+  content: Buffer
+  filename: string
+  contentType: string
+}
+
+export interface BlogImageInfo {
+  url: string
+  key: string
+  size: number
+}
+
+/**
+ * Upload une image de blog vers le bucket public
+ * Retourne l'URL publique directe (pas d'URL présignée nécessaire)
+ */
+export async function uploadBlogImage(uploadData: BlogImageUpload): Promise<BlogImageInfo> {
+  try {
+    const { content, filename, contentType } = uploadData
+    
+    // Générer la clé S3 avec timestamp pour unicité
+    const timestamp = Date.now()
+    const randomId = Math.random().toString(36).substring(7)
+    const extension = filename.split('.').pop()
+    const key = `blog/images/${timestamp}-${randomId}.${extension}`
+    
+    // Upload vers S3 (bucket public) avec les credentials blog
+    const command = new PutObjectCommand({
+      Bucket: BLOG_BUCKET_NAME,
+      Key: key,
+      Body: content,
+      ContentType: contentType,
+      // Pas besoin de ACL car le bucket est déjà public
+    })
+    
+    await s3BlogClient.send(command)
+    
+    // Construire l'URL publique directe
+    const publicUrl = `https://${BLOG_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${key}`
+    
+    return {
+      url: publicUrl,
+      key,
+      size: content.byteLength
+    }
+  } catch (error) {
+    console.error('Erreur upload image blog S3:', error)
+    throw new Error('Impossible d\'uploader l\'image de blog')
+  }
+}
+
+/**
+ * Supprime une image de blog
+ */
+export async function deleteBlogImage(key: string): Promise<void> {
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: BLOG_BUCKET_NAME,
+      Key: key
+    })
+    
+    await s3BlogClient.send(command)
+  } catch (error) {
+    console.error('Erreur suppression image blog S3:', error)
+    throw new Error('Impossible de supprimer l\'image de blog')
+  }
+}
+
+/**
+ * Construit l'URL publique pour une clé S3 de blog
+ */
+export function getBlogImagePublicUrl(key: string): string {
+  return `https://${BLOG_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${key}`
 }

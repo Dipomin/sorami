@@ -278,6 +278,75 @@ async function handlePaystackChargeSuccess(data: any) {
       },
     });
 
+    // 🎯 NOUVEAU : Gérer les paiements uniques (achat de crédits)
+    if (data.metadata?.type === 'one-time-purchase' && data.metadata?.credits) {
+      const credits = data.metadata.credits;
+      const offerType = data.metadata.offerType || 'pack-createur';
+      
+      console.log(`🛒 Paiement unique détecté: ${offerType} pour ${customerEmail}`);
+
+      await prisma.$transaction(async (tx) => {
+        // Ajouter les crédits à l'utilisateur
+        let totalCreditsAdded = 0;
+        
+        // Crédits pour images
+        if (credits.images && credits.images > 0) {
+          totalCreditsAdded += credits.images * 10; // 1 image = 10 crédits
+        }
+        
+        // Crédits pour blog posts
+        if (credits.blogPosts && credits.blogPosts > 0) {
+          totalCreditsAdded += credits.blogPosts * 50; // 1 article = 50 crédits
+        }
+
+        await tx.user.update({
+          where: { id: user.id },
+          data: {
+            credits: { increment: totalCreditsAdded },
+            creditsUpdatedAt: new Date(),
+          },
+        });
+
+        // Créer une transaction de crédits pour l'historique
+        await tx.creditTransaction.create({
+          data: {
+            userId: user.id,
+            amount: totalCreditsAdded,
+            type: 'PURCHASE',
+            description: `Achat Pack Créateur: ${credits.images || 0} images + ${credits.blogPosts || 0} articles`,
+            transactionRef: reference,
+            metadata: {
+              offerType,
+              creditsBreakdown: credits,
+              amount,
+              currency: data.currency,
+              paystackReference: reference,
+            },
+          },
+        });
+
+        console.log(`💳 ${totalCreditsAdded} crédits ajoutés à ${customerEmail} (${credits.images} images, ${credits.blogPosts} articles)`);
+      });
+
+      // Créer une notification
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: 'SUCCESS',
+          title: '🎉 Pack Créateur activé !',
+          message: `Votre Pack Créateur a été activé avec succès. Vous pouvez maintenant créer ${credits.images || 0} images et ${credits.blogPosts || 0} articles.`,
+          metadata: {
+            credits,
+            offerType,
+            reference,
+            amount,
+          },
+        },
+      });
+
+      return; // Sortir car c'est un paiement unique, pas d'abonnement
+    }
+
     // Si c'est un paiement avec un plan (premier paiement d'abonnement)
     if (data.plan && data.plan.plan_code) {
       console.log(`📝 Création d'abonnement pour le plan: ${data.plan.plan_code}`);

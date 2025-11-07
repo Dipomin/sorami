@@ -18,7 +18,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BlogCoverImage } from "@/components/ui/S3Image";
+import { BlogCoverImage } from "@/components/ui/BlogImage";
 
 interface BlogPost {
   id: string;
@@ -360,7 +360,7 @@ export default function BlogPage() {
                       {/* Image de couverture */}
                       <div className="h-48 bg-gradient-to-br from-primary-900/30 to-accent-900/30 relative overflow-hidden">
                         <BlogCoverImage
-                          s3Key={post.coverImage}
+                          src={post.coverImage}
                           alt={post.title}
                           className="w-full h-full group-hover:scale-105 transition-transform duration-300"
                         />

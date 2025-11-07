@@ -17,6 +17,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/blog(.*)', // Pages publiques du blog
   '/legal(.*)', // Pages légales
+  '/contact', // Page de contact publique
+  '/pricing', // Page de tarification publique
   '/api/webhooks/clerk',
   '/api/webhooks/book-completion', // Webhook pour la complétion des livres
   '/api/webhooks/blog-completion', // Webhook pour la complétion des articles de blog
@@ -28,6 +30,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/blog/posts', // API publique pour les articles (GET seulement)
   '/api/blog/categories', // API publique pour les catégories (GET seulement)
   '/api/legal(.*)', // API publique pour les pages légales
+  '/api/contact', // API publique pour le formulaire de contact
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

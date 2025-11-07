@@ -2,7 +2,7 @@
  * Composant pour afficher des images S3 avec URLs présignées
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { usePresignedUrl, extractS3Key } from "@/hooks/usePresignedUrl";
 
 interface S3ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
@@ -20,6 +20,7 @@ export function S3Image({
 }: S3ImageProps) {
   const key = extractS3Key(s3Key);
   const { presignedUrl, isLoading, error } = usePresignedUrl(key);
+  const [imageError, setImageError] = useState(false);
 
   if (isLoading) {
     return loadingComponent ? (
@@ -33,14 +34,21 @@ export function S3Image({
     );
   }
 
-  if (error || !presignedUrl) {
+  if (error || !presignedUrl || imageError) {
     return fallback ? (
       <>{fallback}</>
     ) : (
       <div
-        className={`flex items-center justify-center bg-gray-200 ${className}`}
+        className={`flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 ${className}`}
       >
-        <div className="text-gray-400 text-sm">Image non disponible</div>
+        <div className="text-center p-4">
+          <div className="text-gray-400 dark:text-gray-500 text-2xl mb-2">
+            🖼️
+          </div>
+          <div className="text-gray-500 dark:text-gray-400 text-sm">
+            {error ? "Erreur de chargement" : "Image non disponible"}
+          </div>
+        </div>
       </div>
     );
   }
@@ -50,8 +58,15 @@ export function S3Image({
       {...imgProps}
       src={presignedUrl}
       className={className}
+      alt={imgProps.alt || "Image"}
       onError={(e) => {
-        console.error("Error loading S3 image:", s3Key);
+        // Log détaillé pour le débogage
+        console.warn("Failed to load S3 image:", {
+          originalS3Key: s3Key,
+          extractedKey: key,
+          presignedUrl: presignedUrl?.substring(0, 100) + "...",
+        });
+        setImageError(true);
         if (imgProps.onError) {
           imgProps.onError(e);
         }
