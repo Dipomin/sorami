@@ -42,8 +42,8 @@ cd /home/sorami/sorami
 # 1. Corriger les permissions
 sudo chown -R sorami:sorami /home/sorami/sorami
 
-# 2. Supprimer node_modules et package-lock
-sudo rm -rf node_modules package-lock.json
+# 2. Supprimer node_modules, .next et package-lock
+sudo rm -rf node_modules .next package-lock.json
 
 # 3. Nettoyer le cache npm
 npm cache clean --force
@@ -65,14 +65,14 @@ pm2 save
 ### Solution 3 : Une Seule Ligne
 
 ```bash
-cd /home/sorami/sorami && sudo chown -R sorami:sorami . && sudo rm -rf node_modules package-lock.json && npm cache clean --force && npm install --legacy-peer-deps && npx prisma generate && npm run build && pm2 reload sorami-frontend --update-env && pm2 save
+cd /home/sorami/sorami && sudo chown -R sorami:sorami . && sudo rm -rf node_modules .next package-lock.json && npm cache clean --force && npm install --legacy-peer-deps && npx prisma generate && npm run build && pm2 reload sorami-frontend --update-env && pm2 save
 ```
 
 ## 🚀 Après Correction
 
 Le workflow GitHub Actions a été mis à jour pour :
 1. ✅ Vérifier et corriger automatiquement les permissions
-2. ✅ Supprimer `node_modules` et `package-lock.json` avant installation
+2. ✅ Supprimer `node_modules`, `.next` et `package-lock.json` avant installation
 3. ✅ Utiliser `npm install` au lieu de `npm ci` (plus tolérant)
 
 **Re-déclenchez le déploiement** :

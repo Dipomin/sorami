@@ -23,6 +23,12 @@ if [ -d "node_modules" ]; then
     sudo rm -rf node_modules
 fi
 
+# Supprimer .next s'il existe (avec sudo si nécessaire)
+if [ -d ".next" ]; then
+    echo "🗑️  Suppression de .next..."
+    sudo rm -rf .next
+fi
+
 # Supprimer package-lock.json s'il existe
 if [ -f "package-lock.json" ]; then
     echo "🗑️  Suppression de package-lock.json..."
