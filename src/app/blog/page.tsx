@@ -20,6 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { BlogCoverImage } from "@/components/ui/BlogImage";
 
+// Disable static generation for this page (uses Clerk for user context)
+export const dynamic = 'force-dynamic';
+
 interface BlogPost {
   id: string;
   slug: string;

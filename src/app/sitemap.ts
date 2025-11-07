@@ -42,9 +42,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Skip database queries during build if DATABASE_URL is not available
-  if (!process.env.DATABASE_URL) {
-    console.warn('⚠️ DATABASE_URL not found - skipping dynamic blog posts in sitemap');
+  // Skip database queries during build if DATABASE_URL is not available or is a placeholder
+  if (!process.env.DATABASE_URL || 
+      process.env.DATABASE_URL.includes('placeholder') ||
+      process.env.DATABASE_URL.includes('localhost:3306')) {
+    console.warn('⚠️ DATABASE_URL not available or is placeholder - skipping dynamic blog posts in sitemap');
     return staticPages;
   }
 

@@ -75,14 +75,14 @@ jobs:
         env:
           NODE_ENV: production
           SKIP_ENV_VALIDATION: true
-          # Minimal env vars required for build (placeholders)
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'mysql://placeholder:placeholder@localhost:3306/placeholder' }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_placeholder' }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_placeholder' }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || 'placeholder' }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'placeholder' }}
-          AWS_BLOG_ACCESS_KEY_ID: ${{ secrets.AWS_BLOG_ACCESS_KEY_ID || 'placeholder' }}
-          AWS_BLOG_SECRET_ACCESS_KEY: ${{ secrets.AWS_BLOG_SECRET_ACCESS_KEY || 'placeholder' }}
+          # Minimal env vars required for build (placeholders with valid format)
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'mysql://build:build@build-placeholder:3306/build' }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_Y2xpbWJpbmctd3Jlbi0yOS5jbGVyay5hY2NvdW50cy5kZXYk' }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_dGVzdC1zZWNyZXQta2V5LWZvci1idWlsZC1vbmx5' }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID || 'AKIAIOSFODNN7EXAMPLE' }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' }}
+          AWS_BLOG_ACCESS_KEY_ID: ${{ secrets.AWS_BLOG_ACCESS_KEY_ID || 'AKIAIOSFODNN7EXAMPLE' }}
+          AWS_BLOG_SECRET_ACCESS_KEY: ${{ secrets.AWS_BLOG_SECRET_ACCESS_KEY || 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' }}
           AWS_REGION: ${{ secrets.AWS_REGION || 'eu-north-1' }}
           AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME || 'sorami-generated-content-9872' }}
           AWS_S3_BLOG_BUCKET_NAME: ${{ secrets.AWS_S3_BLOG_BUCKET_NAME || 'sorami-blog' }}
