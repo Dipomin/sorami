@@ -168,7 +168,14 @@ jobs:
             npm run build
             
             echo "🔄 Reloading PM2..."
-            pm2 reload sorami-frontend --update-env
+            # Vérifier si le processus existe déjà
+            if pm2 describe sorami-frontend > /dev/null 2>&1; then
+              echo "♻️ Process exists, reloading..."
+              pm2 reload sorami-frontend --update-env
+            else
+              echo "🆕 First deployment, starting new process..."
+              pm2 start ecosystem.config.js --env production
+            fi
             pm2 save
             
             echo "✅ Deployment completed!"
@@ -291,8 +298,12 @@ jobs:
             npx prisma generate
             npm run build
             
-            # Redémarrer
-            pm2 reload sorami-frontend
+            # Redémarrer avec gestion du premier déploiement
+            if pm2 describe sorami-frontend > /dev/null 2>&1; then
+              pm2 reload sorami-frontend
+            else
+              pm2 start ecosystem.config.js --env production
+            fi
             
             echo "🔄 Rollback completed"
           ENDSSH
