@@ -2,20 +2,34 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { deductCredits } from '@/lib/credits';
-import type { VideoGenerationRequest } from '@/types/video-api';
 
 const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9006';
 
+interface ReferenceImage {
+  source: 'url' | 'base64';
+  data: string;
+  type: 'subject' | 'style' | 'asset';
+}
+
+interface VideoGenerationCustomRequest {
+  prompt: string;
+  reference_images?: ReferenceImage[];
+  aspect_ratio?: '16:9' | '16:10';
+  duration_seconds?: 5 | 6 | 7 | 8;
+  number_of_videos?: number;
+  save_to_cloud?: boolean;
+}
+
 export async function POST(request: Request) {
   try {
-    console.log('🎬 [Video Generate API] Réception d\'une requête de génération de vidéo...');
+    console.log('🎬 [Custom Video Generate API] Réception d\'une requête de génération de vidéo personnalisée...');
 
     // 1️⃣ Authentification
     let user;
     try {
       user = await requireAuth();
     } catch (authError) {
-      console.error('❌ [Video Generate API] Erreur d\'authentification:', authError);
+      console.error('❌ [Custom Video Generate API] Erreur d\'authentification:', authError);
       return NextResponse.json(
         {
           error: 'Unauthorized',
@@ -26,43 +40,45 @@ export async function POST(request: Request) {
     }
 
     // 2️⃣ Parser la requête
-    const data: VideoGenerationRequest = await request.json();
+    const data: VideoGenerationCustomRequest = await request.json();
     
-    // 🪙 Déduction des crédits AVANT la génération
+    // 🪙 Déduction des crédits AVANT la génération (vidéos personnalisées = 8 crédits)
     const numVideos = data.number_of_videos || 1;
     const creditResult = await deductCredits({
       userId: user.id,
-      contentType: 'VIDEO',
+      contentType: 'VIDEO_CUSTOM',
       quantity: numVideos,
       metadata: {
         prompt: data.prompt?.substring(0, 100),
         aspect_ratio: data.aspect_ratio,
         duration: data.duration_seconds,
+        hasReferenceImages: (data.reference_images?.length || 0) > 0,
       },
     });
 
     if (!creditResult.success) {
-      console.error('❌ [Video Generate API] Crédits insuffisants:', creditResult.error);
+      console.error('❌ [Custom Video Generate API] Crédits insuffisants:', creditResult.error);
       return NextResponse.json(
         {
           error: 'Insufficient credits',
           message: creditResult.error,
           creditsAvailable: creditResult.creditsRemaining,
-          creditsRequired: numVideos * 5, // 5 crédits par vidéo
+          creditsRequired: numVideos * 8, // 8 crédits par vidéo personnalisée
         },
         { status: 402 } // Payment Required
       );
     }
 
-    console.log('✅ [Video Generate API] Crédits déduits:', {
+    console.log('✅ [Custom Video Generate API] Crédits déduits:', {
       deducted: creditResult.creditsDeducted,
       remaining: creditResult.creditsRemaining,
     });
-    console.log('📦 [Video Generate API] Données reçues:', {
+    console.log('📦 [Custom Video Generate API] Données reçues:', {
       prompt: data.prompt?.substring(0, 50),
       aspect_ratio: data.aspect_ratio,
       duration: data.duration_seconds,
       num_videos: data.number_of_videos,
+      reference_images_count: data.reference_images?.length || 0,
     });
 
     // Récupérer l'organisation par défaut de l'utilisateur
@@ -83,16 +99,16 @@ export async function POST(request: Request) {
         aspectRatio: data.aspect_ratio || '16:9',
         durationSeconds: data.duration_seconds || 8,
         numberOfVideos: data.number_of_videos || 1,
-        personGeneration: data.person_generation || 'ALLOW_ALL',
-        inputImageBase64: data.input_image_base64 || null,
-        model: 'gemini-veo-2.0', // Modèle par défaut
+        personGeneration: 'ALLOW_ALL',
+        inputImageBase64: null, // Les images sont envoyées en reference_images
+        model: 'veo-3.1-generate-preview',
         status: 'PENDING',
         progress: 0,
         message: 'Initialisation de la génération...',
       },
     });
 
-    console.log('✅ [Video Generate API] VideoGeneration créée:', {
+    console.log('✅ [Custom Video Generate API] VideoGeneration créée:', {
       id: videoGeneration.id,
       authorId: videoGeneration.authorId,
     });
@@ -100,16 +116,16 @@ export async function POST(request: Request) {
     // 4️⃣ Appeler le backend Flask avec le job_id de Prisma
     const backendPayload = {
       ...data,
-      job_id: videoGeneration.id, // ✨ Utiliser l'ID Prisma
+      job_id: videoGeneration.id, // ✨ Utiliser l'ID Prisma comme job_id
       user_id: user.id,
     };
 
-    console.log('🚀 [Video Generate API] Envoi au backend Flask...', {
-      url: `${BACKEND_API_URL}/api/videos/generate`,
+    console.log('🚀 [Custom Video Generate API] Envoi au backend Flask...', {
+      url: `${BACKEND_API_URL}/api/secure/videos/generate-with-images`,
       job_id: videoGeneration.id,
     });
 
-    const backendResponse = await fetch(`${BACKEND_API_URL}/api/videos/generate`, {
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/secure/videos/generate-with-images`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -119,49 +135,56 @@ export async function POST(request: Request) {
     });
 
     if (!backendResponse.ok) {
-      const errorData = await backendResponse.json().catch(() => ({}));
-      console.error('❌ [Video Generate API] Erreur backend:', errorData);
+      const errorText = await backendResponse.text();
+      console.error('❌ [Custom Video Generate API] Erreur backend:', {
+        status: backendResponse.status,
+        error: errorText,
+      });
 
-      // Mettre à jour le statut en cas d'erreur
+      // Mettre à jour le statut en FAILED
       await prisma.videoGeneration.update({
         where: { id: videoGeneration.id },
         data: {
           status: 'FAILED',
-          error: errorData.message || 'Erreur lors de la communication avec le backend',
-          message: errorData.message,
+          error: `Erreur backend: ${errorText}`,
         },
       });
 
-      // Retourner une réponse avec le statut failed au lieu de lancer une erreur
       return NextResponse.json(
         {
-          job_id: videoGeneration.id,
-          status: 'FAILED',
-          error: errorData.error || 'Backend error',
-          message: errorData.message || 'Erreur lors de la génération de vidéo',
+          error: 'Backend error',
+          message: errorText,
         },
-        { status: 400 } // 400 au lieu de 500 car c'est une erreur de configuration backend
+        { status: backendResponse.status }
       );
     }
 
-    const backendResult = await backendResponse.json();
-    console.log('✅ [Video Generate API] Réponse du backend:', backendResult);
+    const backendData = await backendResponse.json();
+    console.log('✅ [Custom Video Generate API] Réponse backend:', backendData);
 
-    // 5️⃣ Retourner la réponse avec le job_id Prisma
-    return NextResponse.json({
-      job_id: videoGeneration.id,
-      status: videoGeneration.status,
-      message: 'Génération de vidéo démarrée',
-      created_at: videoGeneration.createdAt.toISOString(),
+    // 5️⃣ Mettre à jour le statut avec les infos du backend
+    await prisma.videoGeneration.update({
+      where: { id: videoGeneration.id },
+      data: {
+        status: 'PROCESSING',
+        progress: 10,
+        message: 'Génération en cours...',
+      },
     });
 
+    // 6️⃣ Retourner la réponse au frontend
+    return NextResponse.json({
+      success: true,
+      job_id: videoGeneration.id,
+      message: 'Génération démarrée avec succès',
+      creditsRemaining: creditResult.creditsRemaining,
+    });
   } catch (error) {
-    console.error('❌ [Video Generate API] Erreur:', error);
-    
+    console.error('❌ [Custom Video Generate API] Erreur:', error);
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );

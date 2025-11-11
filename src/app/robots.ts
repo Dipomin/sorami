@@ -15,9 +15,10 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           '/',
           '/blog',
+          '/contact',
           '/blog/*',
           '/pricing',
-          '/legal/*',
+          //'/legal/*',
         ],
         disallow: [
           '/admin',

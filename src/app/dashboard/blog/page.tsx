@@ -34,7 +34,7 @@ export default function BlogPage() {
                   Gérez vos articles de blog optimisés SEO
                 </p>
               </div>
-              <Link href="/blog/create">
+              <Link href="/dashboard/blog/create">
                 <Button variant="glow" className="gap-2">
                   <PenSquare className="w-5 h-5" />
                   Nouvel article

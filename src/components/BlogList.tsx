@@ -48,7 +48,7 @@ export const BlogList: React.FC<BlogListProps> = ({
           Commencez par créer votre premier article de blog optimisé SEO avec
           l'IA
         </p>
-        <Link href="/blog/create">
+        <Link href="/dashboard/blog/create">
           <Button variant="glow" className="gap-2">
             <PenSquare className="w-5 h-5" />
             Créer mon premier article

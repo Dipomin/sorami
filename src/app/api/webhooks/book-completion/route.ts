@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       hasUserId: !!payload.user_id
     });
 
-    // 6. Vérifier que le job existe dans notre base, sinon le créer
+    // 6. Vérifier que le job existe dans notre base
     let existingJob: Awaited<ReturnType<typeof prisma.bookJob.findUnique<{
       where: { id: string };
       include: { book: true; user: true };
@@ -186,15 +186,18 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Si le job n'existe pas, on le crée avec les données du webhook
+    // Si le job n'existe pas avec l'ID du webhook, chercher un job RUNNING/PENDING récent
     if (!existingJob) {
-      console.log('⚠️ Job non trouvé, création automatique', { jobId: payload.job_id });
+      console.log('⚠️ Job non trouvé avec ID webhook, recherche d\'un job en cours...', { 
+        webhookJobId: payload.job_id,
+        bookTitle: payload.book_data?.book_title 
+      });
       
       // Extraire le userId du payload ou utiliser un user par défaut
       let userId = payload.user_id;
       
       if (!userId) {
-        // Chercher le premier utilisateur admin ou créer un user par défaut
+        // Chercher le premier utilisateur
         const firstUser = await prisma.user.findFirst({
           orderBy: { createdAt: 'asc' }
         });
@@ -216,44 +219,77 @@ export async function POST(request: NextRequest) {
         console.log('📝 Utilisation du premier utilisateur trouvé:', userId);
       }
 
-      // Créer le job avec le statut RUNNING pour cohérence
-      try {
-        const newJob = await prisma.bookJob.create({
-          data: {
-            id: payload.job_id,
-            userId: userId,
-            jobType: 'BOOK_GENERATION',
-            status: 'RUNNING',
-            inputData: payload.book_data ? {
-              title: payload.book_data.book_title,
-              topic: payload.book_data.topic,
-              goal: payload.book_data.goal,
-            } : {}
-          },
-          include: {
-            book: true,
-            user: true,
+      // Chercher un job RUNNING ou PENDING récent (dernière heure)
+      // Ne pas filtrer par userId car le webhook peut ne pas avoir le bon userId
+      const recentJob = await prisma.bookJob.findFirst({
+        where: {
+          jobType: 'BOOK_GENERATION',
+          status: { in: ['RUNNING', 'PENDING'] },
+          createdAt: {
+            gte: new Date(Date.now() - 60 * 60 * 1000) // Dernière heure
           }
+        },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          book: true,
+          user: true,
+        }
+      });
+
+      if (recentJob) {
+        console.log('✅ Job en cours trouvé, utilisation pour lier le livre', {
+          jobId: recentJob.id,
+          webhookJobId: payload.job_id,
+          userId: recentJob.userId,
+          bookTitle: payload.book_data?.book_title
         });
         
-        // Réassigner avec le bon type
-        existingJob = newJob;
+        // Utiliser le job existant
+        existingJob = recentJob;
         
-        console.log('✅ Job créé automatiquement', { 
-          jobId: newJob.id, 
-          userId: newJob.userId 
-        });
-      } catch (createError) {
-        console.error('❌ Erreur lors de la création du job:', createError);
-        processedWebhooks.delete(idempotencyKey);
-        return NextResponse.json(
-          { 
-            error: 'Failed to create job', 
-            message: createError instanceof Error ? createError.message : 'Unknown error',
-            job_id: payload.job_id 
-          },
-          { status: 500 }
-        );
+        // Mettre à jour userId pour les notifications
+        userId = recentJob.userId;
+      } else {
+        console.log('⚠️ Aucun job en cours trouvé, création automatique');
+        
+        // Créer un nouveau job avec l'ID du webhook
+        try {
+          const newJob = await prisma.bookJob.create({
+            data: {
+              id: payload.job_id,
+              userId: userId,
+              jobType: 'BOOK_GENERATION',
+              status: 'RUNNING',
+              inputData: payload.book_data ? {
+                title: payload.book_data.book_title,
+                topic: payload.book_data.topic,
+                goal: payload.book_data.goal,
+              } : {}
+            },
+            include: {
+              book: true,
+              user: true,
+            }
+          });
+          
+          existingJob = newJob;
+          
+          console.log('✅ Job créé automatiquement', { 
+            jobId: newJob.id, 
+            userId: newJob.userId 
+          });
+        } catch (createError) {
+          console.error('❌ Erreur lors de la création du job:', createError);
+          processedWebhooks.delete(idempotencyKey);
+          return NextResponse.json(
+            { 
+              error: 'Failed to create job', 
+              message: createError instanceof Error ? createError.message : 'Unknown error',
+              job_id: payload.job_id 
+            },
+            { status: 500 }
+          );
+        }
       }
     }
 
@@ -432,9 +468,9 @@ async function handleBookCompletion(
 
       console.log(`✅ ${chapters.length} chapitres créés`);
 
-      // 4. Mettre à jour le job comme terminé
+      // 4. Mettre à jour le job comme terminé (utiliser l'ID du job existant)
       await tx.bookJob.update({
-        where: { id: payload.job_id },
+        where: { id: existingJob.id },
         data: {
           status: 'COMPLETED',
           completedAt: new Date(),
@@ -444,6 +480,7 @@ async function handleBookCompletion(
             chaptersCount: chapters.length,
             wordCount: payload.book_data!.word_count,
             generatedAt: payload.book_data!.generated_at,
+            webhookJobId: payload.job_id, // Garder une trace de l'ID du webhook
           },
           bookId: book.id,
         }
@@ -503,9 +540,9 @@ async function handleBookFailure(
   console.log(`❌ Traitement de l'échec pour le job: ${payload.job_id}`);
   
   try {
-    // Mettre à jour le job comme échoué
+    // Mettre à jour le job comme échoué (utiliser l'ID du job existant)
     await prisma.bookJob.update({
-      where: { id: payload.job_id },
+      where: { id: existingJob.id },
       data: {
         status: 'FAILED',
         completedAt: new Date(),
@@ -519,16 +556,17 @@ async function handleBookFailure(
       'BOOK_FAILED',
       `La génération de votre livre a échoué.`,
       {
-        jobId: payload.job_id,
+        jobId: existingJob.id,
+        webhookJobId: payload.job_id,
         error: payload.error || 'Erreur inconnue',
         timestamp: payload.timestamp
       }
     );
 
-    console.log(`✅ Échec enregistré pour le job: ${payload.job_id}`);
+    console.log(`✅ Échec enregistré pour le job: ${existingJob.id}`);
 
     return {
-      jobId: payload.job_id,
+      jobId: existingJob.id,
       error: payload.error || 'Unknown error'
     };
 

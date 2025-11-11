@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Image as ImageIcon,
@@ -16,11 +16,14 @@ import {
   User,
   Mountain,
   Watch,
+  History,
+  Eye,
 } from "lucide-react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
+import ImageModal from "@/components/dashboard/ImageModal";
 
 // Types
 type ImageSource = "url" | "path" | "base64";
@@ -67,6 +70,17 @@ interface JobStatusResponse {
   error?: string;
 }
 
+interface ImageGeneration {
+  id: string;
+  prompt: string;
+  status: string;
+  images: GeneratedImage[];
+  generationMetadata: any;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
 const qualityOptions = [
   { value: "thumbnail", label: "Thumbnail", desc: "500x500" },
   { value: "standard", label: "Standard", desc: "1000x1000" },
@@ -98,6 +112,63 @@ export default function EcommerceImagesPage() {
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // État pour l'historique
+  const [previousGenerations, setPreviousGenerations] = useState<
+    ImageGeneration[]
+  >([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // État pour le modal
+  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(
+    null
+  );
+  const [selectedPrompt, setSelectedPrompt] = useState<string>("");
+  const [selectedMetadata, setSelectedMetadata] = useState<any>(null);
+  const [selectedCreatedAt, setSelectedCreatedAt] = useState<string>("");
+
+  // Charger l'historique au montage du composant
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      setLoadingHistory(true);
+      const response = await fetch("/api/image-generations");
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement de l'historique");
+      }
+
+      const data = await response.json();
+      setPreviousGenerations(data.generations || []);
+    } catch (error) {
+      console.error("Erreur chargement historique:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const openImageModal = (
+    image: GeneratedImage,
+    prompt: string,
+    metadata: any,
+    createdAt: string
+  ) => {
+    setSelectedImage(image);
+    setSelectedPrompt(prompt);
+    setSelectedMetadata(metadata);
+    setSelectedCreatedAt(createdAt);
+  };
+
+  const closeImageModal = () => {
+    setSelectedImage(null);
+    setSelectedPrompt("");
+    setSelectedMetadata(null);
+    setSelectedCreatedAt("");
+  };
 
   // Gestion des images de référence
   const handleFileUpload = useCallback(
@@ -270,7 +341,9 @@ export default function EcommerceImagesPage() {
 
       // Appel API
       const response = await fetch(
-        "http://localhost:9006/api/secure/images/generate-ecommerce",
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:9006"
+        }/api/secure/images/generate-ecommerce`,
         {
           method: "POST",
           headers: {
@@ -704,13 +777,27 @@ export default function EcommerceImagesPage() {
                         key={index}
                         className="border border-dark-700 rounded-xl overflow-hidden bg-dark-800/30"
                       >
-                        {/* Image */}
-                        <div className="relative aspect-square bg-dark-900">
+                        {/* Image - Cliquable pour ouvrir en modal */}
+                        <div
+                          className="relative aspect-square bg-dark-900 cursor-pointer group"
+                          onClick={() =>
+                            openImageModal(
+                              img,
+                              prompt,
+                              { qualityLevel, numVariations, outputFormat },
+                              new Date().toISOString()
+                            )
+                          }
+                        >
                           <img
                             src={img.url}
                             alt={img.filename}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
                           />
+                          {/* Overlay au survol */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <Eye className="w-8 h-8 text-white" />
+                          </div>
                         </div>
 
                         {/* Informations */}
@@ -746,21 +833,30 @@ export default function EcommerceImagesPage() {
                           </div>
 
                           {/* Bouton téléchargement */}
-                          <a
-                            href={img.url}
-                            download={img.filename}
-                            className="block"
-                            target="_blank"
+                          <Button
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(img.url);
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = img.filename;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                              } catch (error) {
+                                console.error("Erreur téléchargement:", error);
+                              }
+                            }}
+                            variant="default"
+                            size="sm"
+                            className="w-full"
                           >
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="w-full"
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              Télécharger
-                            </Button>
-                          </a>
+                            <Download className="w-4 h-4 mr-2" />
+                            Télécharger
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -770,6 +866,122 @@ export default function EcommerceImagesPage() {
             </div>
           </motion.div>
         </div>
+
+        {/* Section Historique */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-12"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                <History className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-display font-bold text-white">
+                  Historique
+                </h2>
+                <p className="text-dark-300 text-sm">
+                  {previousGenerations.length} génération(s) précédente(s)
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowHistory(!showHistory)}
+              variant="outline"
+              size="sm"
+            >
+              {showHistory ? "Masquer" : "Afficher"}
+            </Button>
+          </div>
+
+          {showHistory && (
+            <div className="space-y-6">
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+                </div>
+              ) : previousGenerations.length === 0 ? (
+                <div className="bg-dark-900/50 border border-dark-800/50 rounded-2xl p-12 text-center">
+                  <ImageIcon className="w-16 h-16 mx-auto mb-4 text-dark-600" />
+                  <p className="text-dark-400 text-lg">
+                    Aucune génération précédente
+                  </p>
+                  <p className="text-dark-500 text-sm mt-2">
+                    Vos images générées apparaîtront ici
+                  </p>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {previousGenerations.map((generation) =>
+                    generation.images.map((image) => (
+                      <motion.div
+                        key={image.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        whileHover={{ scale: 1.02 }}
+                        className="bg-dark-900/50 border border-dark-800/50 rounded-xl overflow-hidden cursor-pointer group"
+                        onClick={() =>
+                          openImageModal(
+                            image,
+                            generation.prompt,
+                            generation.generationMetadata,
+                            generation.createdAt
+                          )
+                        }
+                      >
+                        {/* Image */}
+                        <div className="relative aspect-square bg-dark-800/30 overflow-hidden">
+                          <img
+                            src={image.url}
+                            alt={image.filename}
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                          />
+                          {/* Overlay au survol */}
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <Eye className="w-8 h-8 text-white" />
+                          </div>
+                        </div>
+
+                        {/* Informations rapides */}
+                        <div className="p-4">
+                          <p className="text-white font-medium text-sm truncate mb-2">
+                            {image.filename}
+                          </p>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-dark-400">
+                              {image.width}×{image.height}
+                            </span>
+                            <span className="text-dark-400 uppercase">
+                              {image.format}
+                            </span>
+                          </div>
+                          <p className="text-dark-500 text-xs mt-2 line-clamp-2">
+                            {generation.prompt}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+
+        {/* Modal d'image */}
+        {selectedImage && (
+          <ImageModal
+            isOpen={!!selectedImage}
+            onClose={closeImageModal}
+            image={selectedImage}
+            prompt={selectedPrompt}
+            createdAt={selectedCreatedAt}
+            additionalMetadata={selectedMetadata}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Video,
@@ -11,6 +11,7 @@ import {
   Wand2,
   ArrowLeft,
   Film,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -30,27 +31,209 @@ const qualities = [
   { id: "fhd", label: "Full HD", desc: "1080p" },
 ];
 
+interface UserVideo {
+  id: string;
+  filename: string;
+  fileUrl: string | null;
+  width: number;
+  height: number;
+  durationSeconds: number;
+  createdAt: string;
+  format: string;
+  generation?: {
+    prompt: string;
+    createdAt: string;
+  };
+}
+
+interface UserVideoGeneration {
+  id: string;
+  prompt: string;
+  createdAt: string;
+  completedAt: string | null;
+  videos: UserVideo[];
+}
+
 export default function GenerateVideosPage() {
   const [prompt, setPrompt] = useState("");
   const [duration, setDuration] = useState("5");
   const [quality, setQuality] = useState("hd");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState<{ videoUrl: string } | null>(null);
+  const [recentVideos, setRecentVideos] = useState<UserVideo[]>([]);
+  const [loadingGallery, setLoadingGallery] = useState(true);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{
+    video: UserVideo;
+    generation: UserVideoGeneration | null;
+  } | null>(null);
 
-  const { generateVideo } = useVideoGeneration();
+  // ✅ Utiliser les states du hook au lieu de créer des locaux
+  const { generateVideo, isGenerating, result, currentStatus, error, reset } =
+    useVideoGeneration();
+
+  // Charger les vidéos récentes de l'utilisateur
+  const fetchRecentVideos = useCallback(async (pageNum: number = 1) => {
+    try {
+      if (pageNum === 1) {
+        setLoadingGallery(true);
+      } else {
+        setLoadingMore(true);
+      }
+      setGalleryError(null);
+
+      console.log(`🔍 Chargement des vidéos page ${pageNum}...`);
+      const response = await fetch(`/api/videos/user?page=${pageNum}&limit=12`);
+
+      console.log("📡 Réponse API:", response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Erreur API:", errorData);
+        setGalleryError(errorData.error || "Erreur de chargement");
+        throw new Error("Erreur lors du chargement des vidéos");
+      }
+
+      const data = await response.json();
+      console.log("📦 Données reçues:", data);
+
+      // Extraire toutes les vidéos de toutes les générations
+      const allVideos: UserVideo[] = [];
+      data.generations.forEach((gen: UserVideoGeneration) => {
+        if (gen.videos && gen.videos.length > 0) {
+          gen.videos.forEach((vid) => {
+            if (vid.fileUrl && vid.fileUrl.trim() !== "") {
+              allVideos.push({
+                ...vid,
+                generation: {
+                  prompt: gen.prompt,
+                  createdAt: gen.createdAt,
+                },
+              });
+            } else {
+              console.warn(`⚠️ Vidéo ${vid.id} sans URL valide, ignorée`);
+            }
+          });
+        }
+      });
+
+      console.log("🎬 Total vidéos extraites:", allVideos.length);
+
+      // Trier par date de création décroissante
+      const sortedVideos = allVideos.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      if (pageNum === 1) {
+        setRecentVideos(sortedVideos);
+      } else {
+        setRecentVideos((prev) => [...prev, ...sortedVideos]);
+      }
+
+      // Vérifier s'il y a plus de vidéos
+      setHasMore(sortedVideos.length === 12);
+    } catch (error) {
+      console.error("💥 Erreur chargement galerie:", error);
+    } finally {
+      setLoadingGallery(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // Charger les vidéos au montage
+  useEffect(() => {
+    fetchRecentVideos(1);
+  }, [fetchRecentVideos]);
+
+  // Intersection Observer pour le lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !loadingMore &&
+          !loadingGallery
+        ) {
+          console.log("📥 Chargement de la page suivante...");
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [hasMore, loadingMore, loadingGallery]);
+
+  // Charger plus de vidéos quand page change
+  useEffect(() => {
+    if (page > 1) {
+      fetchRecentVideos(page);
+    }
+  }, [page, fetchRecentVideos]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
-    setIsGenerating(true);
-    // Simuler la génération
-    await generateVideo({ prompt });
+    try {
+      await generateVideo({ prompt });
+
+      // Rafraîchir la galerie après génération réussie
+      if (result && result.status === "completed") {
+        fetchRecentVideos(1);
+      }
+    } catch (err) {
+      console.error("Erreur génération:", err);
+    }
   };
 
+  // Rafraîchir la galerie quand result change et est complété
+  useEffect(() => {
+    if (result && result.status === "completed") {
+      console.log("🔄 Rafraîchissement de la galerie après génération");
+      fetchRecentVideos(1);
+    }
+  }, [result, fetchRecentVideos]);
+
   const handleReset = () => {
-    setResult(null);
+    reset();
     setPrompt("");
-    setIsGenerating(false);
+  };
+
+  const handleDownload = async (videoUrl: string, filename: string) => {
+    try {
+      const response = await fetch("/api/videos/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: videoUrl }),
+      });
+
+      if (!response.ok) throw new Error("Échec du téléchargement");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "video.mp4";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Erreur téléchargement:", error);
+    }
   };
 
   return (
@@ -220,11 +403,16 @@ export default function GenerateVideosPage() {
                         </div>
                       </div>
                       <p className="text-white font-medium mb-2">
-                        Création en cours...
+                        {currentStatus?.message || "Création en cours..."}
                       </p>
                       <p className="text-dark-400 text-sm">
-                        Traitement vidéo IA
+                        Traitement vidéo IA - {currentStatus?.progress || 0}%
                       </p>
+                      {error && (
+                        <p className="text-red-400 text-sm mt-2">
+                          Erreur: {error}
+                        </p>
+                      )}
                     </motion.div>
                   ) : result ? (
                     <motion.div
@@ -234,27 +422,56 @@ export default function GenerateVideosPage() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       className="w-full"
                     >
-                      <div className="relative rounded-xl overflow-hidden bg-dark-950 aspect-video group">
-                        <video
-                          src={result.videoUrl}
-                          controls
-                          className="w-full h-full"
-                        />
-                      </div>
-                      <div className="mt-4 p-4 bg-dark-800/30 rounded-xl space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-dark-400">Durée:</span>
-                          <span className="text-white font-medium">
-                            {duration}s
-                          </span>
+                      {result.videos &&
+                      result.videos.length > 0 &&
+                      result.videos[0]?.file_url ? (
+                        <>
+                          <div className="relative rounded-xl overflow-hidden bg-dark-950 aspect-video group">
+                            <video
+                              src={result.videos[0].file_url}
+                              controls
+                              className="w-full h-full"
+                              onError={(e) => {
+                                console.error(
+                                  "❌ Erreur chargement vidéo:",
+                                  result.videos[0].file_url
+                                );
+                              }}
+                              onLoadedData={() => {
+                                console.log(
+                                  "✅ Vidéo chargée:",
+                                  result.videos[0].file_url
+                                );
+                              }}
+                            />
+                          </div>
+                          <div className="mt-4 p-4 bg-dark-800/30 rounded-xl space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-dark-400">Durée:</span>
+                              <span className="text-white font-medium">
+                                {result.videos[0].duration_seconds || duration}s
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-dark-400">Résolution:</span>
+                              <span className="text-white font-medium">
+                                {result.videos[0].dimensions.width}x
+                                {result.videos[0].dimensions.height}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-dark-400">Format:</span>
+                              <span className="text-white font-medium">
+                                {result.videos[0].format || "MP4"}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-12 text-red-400">
+                          <p>Aucune vidéo disponible</p>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-dark-400">Qualité:</span>
-                          <span className="text-white font-medium">
-                            {quality.toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </motion.div>
                   ) : (
                     <motion.div
@@ -285,21 +502,261 @@ export default function GenerateVideosPage() {
         >
           <h2 className="text-2xl font-display font-bold text-white mb-6">
             Vos vidéos récentes
+            {recentVideos.length > 0 && (
+              <span className="text-dark-400 text-lg font-normal ml-2">
+                ({recentVideos.length} vidéo
+                {recentVideos.length !== 1 ? "s" : ""})
+              </span>
+            )}
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div
-                key={i}
-                className="aspect-video bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-xl overflow-hidden hover:border-primary-500/50 transition-all cursor-pointer group"
-              >
-                <div className="w-full h-full flex items-center justify-center text-dark-600 group-hover:text-dark-500">
-                  <Video className="w-12 h-12" />
+
+          {loadingGallery ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <div
+                  key={i}
+                  className="aspect-video bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-xl overflow-hidden animate-pulse"
+                >
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-dark-600 animate-spin" />
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : galleryError ? (
+            <div className="text-center py-12 bg-red-900/20 backdrop-blur-sm border border-red-800/50 rounded-xl">
+              <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
+              <p className="text-red-400 font-medium mb-2">
+                Erreur de chargement
+              </p>
+              <p className="text-red-300/70 text-sm">{galleryError}</p>
+              <Button
+                onClick={() => fetchRecentVideos(1)}
+                variant="outline"
+                className="mt-4"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Réessayer
+              </Button>
+            </div>
+          ) : recentVideos.length > 0 ? (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {recentVideos.map((video, index) => (
+                  <motion.div
+                    key={video.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() =>
+                      setSelectedVideo({ video, generation: null })
+                    }
+                    className="aspect-video bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-xl overflow-hidden hover:border-primary-500/50 transition-all cursor-pointer group relative"
+                  >
+                    <video
+                      src={video.fileUrl || ""}
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                      onMouseEnter={(e) => {
+                        const target = e.target as HTMLVideoElement;
+                        target.play().catch(() => {});
+                      }}
+                      onMouseLeave={(e) => {
+                        const target = e.target as HTMLVideoElement;
+                        target.pause();
+                        target.currentTime = 0;
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-dark-900/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                      <div className="text-white text-xs">
+                        <p className="font-medium">
+                          {video.durationSeconds}s · {video.width}x
+                          {video.height}
+                        </p>
+                        <p className="text-dark-300 text-[10px] mt-1">
+                          {new Date(video.createdAt).toLocaleDateString(
+                            "fr-FR",
+                            {
+                              day: "numeric",
+                              month: "short",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(video.fileUrl || "", "_blank");
+                        }}
+                        className="p-2 bg-dark-900/90 backdrop-blur-sm rounded-lg hover:bg-dark-800/90 transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-            ))}
-          </div>
+
+              {/* Loader pour le lazy loading */}
+              {hasMore && (
+                <div
+                  ref={observerTarget}
+                  className="flex items-center justify-center py-8"
+                >
+                  {loadingMore ? (
+                    <div className="flex items-center gap-2 text-dark-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Chargement...</span>
+                    </div>
+                  ) : (
+                    <div className="text-dark-500 text-sm">
+                      Faites défiler pour charger plus
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-12 bg-dark-900/30 backdrop-blur-sm border border-dark-800/50 rounded-xl">
+              <Video className="w-16 h-16 mx-auto mb-4 text-dark-600" />
+              <p className="text-dark-400">
+                Aucune vidéo générée pour le moment
+              </p>
+              <p className="text-dark-500 text-sm mt-2">
+                Vos créations apparaîtront ici
+              </p>
+            </div>
+          )}
         </motion.div>
       </div>
+
+      {/* Modal vidéo avec métadonnées */}
+      <AnimatePresence>
+        {selectedVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedVideo(null)}
+            className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-dark-900/95 backdrop-blur-md border border-dark-800/50 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* En-tête */}
+              <div className="sticky top-0 bg-dark-900/95 backdrop-blur-md border-b border-dark-800/50 p-6 flex items-center justify-between">
+                <h3 className="text-2xl font-display font-bold text-white">
+                  Détails de la vidéo
+                </h3>
+                <button
+                  onClick={() => setSelectedVideo(null)}
+                  className="p-2 hover:bg-dark-800/50 rounded-lg transition-colors"
+                >
+                  <span className="text-2xl text-dark-400 hover:text-white">
+                    ×
+                  </span>
+                </button>
+              </div>
+
+              {/* Contenu */}
+              <div className="p-6 space-y-6">
+                {/* Lecteur vidéo */}
+                <div className="aspect-video bg-dark-950/50 rounded-xl overflow-hidden border border-dark-800/50">
+                  <video
+                    src={selectedVideo.video.fileUrl || ""}
+                    controls
+                    autoPlay
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+
+                {/* Métadonnées */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Colonne gauche - Prompt */}
+                  {selectedVideo.video.generation?.prompt && (
+                    <div className="md:col-span-2 bg-dark-950/50 backdrop-blur-sm border border-dark-800/50 rounded-xl p-4">
+                      <h4 className="text-sm font-medium text-dark-400 mb-2">
+                        Prompt utilisé
+                      </h4>
+                      <p className="text-white text-base leading-relaxed">
+                        {selectedVideo.video.generation.prompt}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Dimensions */}
+                  <div className="bg-dark-950/50 backdrop-blur-sm border border-dark-800/50 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-dark-400 mb-2">
+                      Dimensions
+                    </h4>
+                    <p className="text-white text-xl font-semibold">
+                      {selectedVideo.video.width} × {selectedVideo.video.height}
+                    </p>
+                  </div>
+
+                  {/* Durée */}
+                  <div className="bg-dark-950/50 backdrop-blur-sm border border-dark-800/50 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-dark-400 mb-2">
+                      Durée
+                    </h4>
+                    <p className="text-white text-xl font-semibold">
+                      {selectedVideo.video.durationSeconds} secondes
+                    </p>
+                  </div>
+
+                  {/* Format */}
+                  <div className="bg-dark-950/50 backdrop-blur-sm border border-dark-800/50 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-dark-400 mb-2">
+                      Format
+                    </h4>
+                    <p className="text-white text-xl font-semibold uppercase">
+                      {selectedVideo.video.format}
+                    </p>
+                  </div>
+
+                  {/* Date de création */}
+                  <div className="bg-dark-950/50 backdrop-blur-sm border border-dark-800/50 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-dark-400 mb-2">
+                      Créée le
+                    </h4>
+                    <p className="text-white text-xl font-semibold">
+                      {new Date(
+                        selectedVideo.video.createdAt
+                      ).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bouton de téléchargement */}
+                <div className="flex justify-center pt-4">
+                  <Button
+                    onClick={() =>
+                      handleDownload(
+                        selectedVideo.video.fileUrl || "",
+                        selectedVideo.video.filename
+                      )
+                    }
+                    className="bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white px-8 py-6 text-lg"
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    Télécharger la vidéo
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }

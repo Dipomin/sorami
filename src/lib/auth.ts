@@ -8,13 +8,24 @@ const prisma = new PrismaClient();
  * et le synchronise avec notre base de données si nécessaire
  */
 export async function getCurrentUser() {
-  const { userId } = await auth();
-  
-  if (!userId) {
-    return null;
-  }
-  
   try {
+    console.log('🔐 [Auth] Tentative d\'authentification via Clerk...');
+    const authResult = await auth();
+    const { userId } = authResult;
+    
+    console.log('🔐 [Auth] Résultat auth():', { 
+      userId, 
+      sessionId: authResult.sessionId,
+      orgId: authResult.orgId 
+    });
+    
+    if (!userId) {
+      console.log('🔐 [Auth] Aucun userId trouvé - utilisateur non connecté');
+      return null;
+    }
+    
+    console.log('🔐 [Auth] Recherche utilisateur dans la DB:', userId);
+    
     // Chercher l'utilisateur dans notre base de données par clerkId
     let user = await prisma.user.findUnique({
       where: { clerkId: userId },
@@ -111,28 +122,15 @@ export async function getCurrentUser() {
   } catch (error: any) {
     console.error('Erreur lors de la récupération/synchronisation de l\'utilisateur:', error);
     
+    // Si c'est une erreur Clerk spécifique, la propager
+    if (error.message?.includes('signing key')) {
+      console.error('Erreur de clé de signature Clerk - session invalide ou expirée');
+      throw new Error('Erreur de vérification: ' + error.message);
+    }
+    
     // Gestion spécifique des erreurs Prisma
     if (error.code === 'P2002') {
-      console.error('Contrainte unique violée - possible race condition, retry...');
-      // Dans ce cas, essayons de récupérer l'utilisateur existant
-      try {
-        const user = await prisma.user.findUnique({
-          where: { clerkId: userId },
-          include: {
-            organizationMemberships: {
-              include: {
-                organization: true,
-              },
-            },
-          },
-        });
-        if (user) {
-          console.log('Utilisateur récupéré après race condition:', user.id);
-          return user;
-        }
-      } catch (retryError) {
-        console.error('Erreur lors du retry:', retryError);
-      }
+      console.error('Contrainte unique violée - possible race condition');
     }
     
     return null;

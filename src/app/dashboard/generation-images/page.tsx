@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Image as ImageIcon,
@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Images,
   AlertCircle,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -66,73 +67,125 @@ export default function GenerateImagesPage() {
   const [recentImages, setRecentImages] = useState<UserImage[]>([]);
   const [loadingGallery, setLoadingGallery] = useState(true);
   const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const [selectedImage, setSelectedImage] = useState<{
+    url: string;
+    description?: string;
+    dimensions?: string;
+    format?: string;
+    size_bytes?: number;
+    prompt?: string;
+    style?: string;
+    filename?: string;
+    createdAt?: string;
+  } | null>(null);
 
-  // Charger les images récentes de l'utilisateur
-  useEffect(() => {
-    const fetchRecentImages = async () => {
-      try {
+  // Charger les images récentes de l'utilisateur avec pagination
+  const fetchRecentImages = useCallback(async (pageNum: number = 1) => {
+    try {
+      if (pageNum === 1) {
         setLoadingGallery(true);
-        setGalleryError(null);
-        console.log("🔍 Chargement des images récentes...");
-        const response = await fetch("/api/images/user");
+      } else {
+        setLoadingMore(true);
+      }
+      setGalleryError(null);
 
-        console.log("📡 Réponse API:", response.status, response.statusText);
+      console.log(`🔍 Chargement des images page ${pageNum}...`);
+      const response = await fetch(`/api/images/user?page=${pageNum}&limit=12`);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("❌ Erreur API:", errorData);
-          setGalleryError(errorData.error || "Erreur de chargement");
-          throw new Error("Erreur lors du chargement des images");
+      console.log("📡 Réponse API:", response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Erreur API:", errorData);
+        setGalleryError(errorData.error || "Erreur de chargement");
+        throw new Error("Erreur lors du chargement des images");
+      }
+
+      const data = await response.json();
+      console.log("📦 Données reçues:", data);
+
+      // Extraire toutes les images de toutes les générations
+      const allImages: UserImage[] = [];
+      data.generations.forEach((gen: UserImageGeneration) => {
+        if (gen.images && gen.images.length > 0) {
+          gen.images.forEach((img) => {
+            if (img.fileUrl && img.fileUrl.trim() !== "") {
+              allImages.push(img);
+            } else {
+              console.warn(`⚠️ Image ${img.id} sans URL valide, ignorée`);
+            }
+          });
         }
+      });
 
-        const data = await response.json();
-        console.log("📦 Données reçues:", data);
-        console.log("📊 Nombre de générations:", data.generations?.length || 0);
+      console.log("🖼️ Total images extraites:", allImages.length);
 
-        // Extraire toutes les images de toutes les générations
-        const allImages: UserImage[] = [];
-        data.generations.forEach((gen: UserImageGeneration) => {
-          console.log(
-            `📸 Génération ${gen.id}:`,
-            gen.images?.length || 0,
-            "images"
-          );
-          // Ne prendre que les générations qui ont vraiment des images
-          if (gen.images && gen.images.length > 0) {
-            gen.images.forEach((img) => {
-              // Vérifier que l'image a bien une URL
-              if (img.fileUrl) {
-                allImages.push(img);
-              } else {
-                console.warn(`⚠️ Image ${img.id} sans URL, ignorée`);
-              }
-            });
-          }
-        });
+      // Trier par date de création décroissante
+      const sortedImages = allImages.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
 
-        console.log("🖼️ Total images extraites:", allImages.length);
-
-        // Trier par date de création décroissante et prendre les 8 dernières
-        const sortedImages = allImages
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          )
-          .slice(0, 8);
-
-        console.log("✅ Images à afficher:", sortedImages.length);
-        console.log("🎯 Première image URL:", sortedImages[0]?.fileUrl);
-
+      if (pageNum === 1) {
         setRecentImages(sortedImages);
-      } catch (error) {
-        console.error("💥 Erreur chargement galerie:", error);
-      } finally {
-        setLoadingGallery(false);
+      } else {
+        setRecentImages((prev) => [...prev, ...sortedImages]);
+      }
+
+      // Vérifier s'il y a plus d'images
+      setHasMore(sortedImages.length === 12);
+    } catch (error) {
+      console.error("💥 Erreur chargement galerie:", error);
+    } finally {
+      setLoadingGallery(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // Charger les images au montage
+  useEffect(() => {
+    fetchRecentImages(1);
+  }, [fetchRecentImages]);
+
+  // Intersection Observer pour le lazy loading
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !loadingMore &&
+          !loadingGallery
+        ) {
+          console.log("� Chargement de la page suivante...");
+          setPage((prev) => prev + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
       }
     };
+  }, [hasMore, loadingMore, loadingGallery]);
 
-    fetchRecentImages();
-  }, []);
+  // Charger plus d'images quand page change
+  useEffect(() => {
+    if (page > 1) {
+      fetchRecentImages(page);
+    }
+  }, [page, fetchRecentImages]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -152,6 +205,10 @@ export default function GenerateImagesPage() {
       };
 
       const generatedImage = await generateImage(data);
+      console.log("✅ Image générée:", generatedImage);
+      console.log("📸 Images dans la réponse:", generatedImage.images);
+      console.log("🔗 URL de l'image:", generatedImage.images?.[0]?.url);
+
       setResult(generatedImage);
 
       // Recharger la galerie après une nouvelle génération réussie
@@ -162,6 +219,11 @@ export default function GenerateImagesPage() {
       ) {
         // Ajouter la nouvelle image en tête de la galerie
         const newImage = generatedImage.images[0];
+        console.log(
+          "🎯 Ajout de la nouvelle image à la galerie:",
+          newImage.url
+        );
+
         setRecentImages((prev) =>
           [
             {
@@ -186,6 +248,53 @@ export default function GenerateImagesPage() {
     setResult(null);
     setPrompt("");
   };
+
+  const handleDownload = async (url: string, filename?: string) => {
+    try {
+      // Utiliser l'API proxy pour éviter les problèmes CORS
+      const downloadFilename = filename || `image-${Date.now()}.png`;
+      const downloadUrl = `/api/images/download?url=${encodeURIComponent(
+        url
+      )}&filename=${encodeURIComponent(downloadFilename)}`;
+
+      console.log("📥 Téléchargement via API proxy:", downloadFilename);
+
+      // Créer un lien de téléchargement
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = downloadFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      console.log("✅ Téléchargement lancé");
+    } catch (error) {
+      console.error("❌ Erreur téléchargement:", error);
+      // Fallback : ouvrir dans un nouvel onglet
+      window.open(url, "_blank");
+    }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return "Inconnu";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  console.log("🖼️ Résultat actuel:", result?.images?.[0].url);
 
   return (
     <DashboardLayout>
@@ -339,7 +448,23 @@ export default function GenerateImagesPage() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-white">Résultat</h3>
                 {result && (
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      // Télécharger la première image
+                      if (result.images && result.images.length > 0) {
+                        const link = document.createElement("a");
+                        link.href = result.images[0].url;
+                        link.download =
+                          result.images[0].file_path.split("/").pop() ||
+                          "image.png";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }
+                    }}
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger
                   </Button>
@@ -365,7 +490,7 @@ export default function GenerateImagesPage() {
                       <p className="text-white font-medium mb-2">
                         Création en cours...
                       </p>
-                      <p className="text-dark-400 text-sm">
+                      <div className="text-dark-400 text-sm">
                         <motion.p
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -373,7 +498,7 @@ export default function GenerateImagesPage() {
                         >
                           {currentStatus?.message || "Initialisation"}
                         </motion.p>
-                      </p>
+                      </div>
                     </motion.div>
                   ) : result ? (
                     <motion.div
@@ -383,36 +508,102 @@ export default function GenerateImagesPage() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       className="w-full"
                     >
-                      <div className="relative rounded-xl overflow-hidden group">
-                        <img
-                          src={
-                            result.images?.[0]?.url || "/placeholder-image.png"
-                          }
-                          alt={
-                            result.images?.[0]?.description || "Image générée"
-                          }
-                          className="w-full h-auto rounded-xl shadow-2xl"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-dark-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-                          <p className="text-white text-sm line-clamp-2">
-                            {prompt}
+                      {result.images &&
+                      result.images.length > 0 &&
+                      result.images[0]?.url ? (
+                        <>
+                          <div
+                            className="relative rounded-xl overflow-hidden group cursor-pointer"
+                            onClick={() =>
+                              setSelectedImage({
+                                url: result.images![0].url,
+                                description: result.images![0].description,
+                                dimensions: result.images![0].dimensions,
+                                format: result.images![0].format,
+                                size_bytes: result.images![0].size_bytes,
+                                prompt: prompt,
+                                style: selectedStyle,
+                                filename:
+                                  result
+                                    .images![0].file_path.split("/")
+                                    .pop() || "image.png",
+                              })
+                            }
+                          >
+                            <img
+                              src={result?.images?.[0]?.url}
+                              alt={
+                                result?.images?.[0]?.description ||
+                                "Image générée"
+                              }
+                              className="w-full h-auto rounded-xl shadow-2xl"
+                              onLoad={() =>
+                                console.log(
+                                  "✅ Image chargée avec succès:",
+                                  result.images?.[0]?.url
+                                )
+                              }
+                              onError={(e) => {
+                                const url = result?.images?.[0]?.url;
+                                console.error(
+                                  "❌ Erreur de chargement de l'image:",
+                                  url
+                                );
+                                console.error("Erreur détails:", e);
+                                // Tester l'URL directement
+                                if (url) {
+                                  fetch(url, { method: "HEAD" })
+                                    .then((res) =>
+                                      console.log(
+                                        "📊 Test fetch HEAD:",
+                                        res.status,
+                                        res.statusText
+                                      )
+                                    )
+                                    .catch((err) =>
+                                      console.error(
+                                        "❌ Test fetch échoué:",
+                                        err
+                                      )
+                                    );
+                                }
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-dark-900/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <div className="text-center">
+                                <ImageIcon className="w-12 h-12 mx-auto mb-2 text-white" />
+                                <p className="text-white font-medium">
+                                  Cliquez pour agrandir
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4 p-4 bg-dark-800/30 rounded-xl">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-dark-400">Style:</span>
+                              <span className="text-white font-medium">
+                                {selectedStyle}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm mt-2">
+                              <span className="text-dark-400">Format:</span>
+                              <span className="text-white font-medium">
+                                {selectedRatio}
+                              </span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-12">
+                          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
+                          <p className="text-dark-400">
+                            Génération terminée mais aucune image disponible
+                          </p>
+                          <p className="text-dark-500 text-sm mt-2">
+                            Statut: {result.status}
                           </p>
                         </div>
-                      </div>
-                      <div className="mt-4 p-4 bg-dark-800/30 rounded-xl">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-dark-400">Style:</span>
-                          <span className="text-white font-medium">
-                            {selectedStyle}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm mt-2">
-                          <span className="text-dark-400">Format:</span>
-                          <span className="text-white font-medium">
-                            {selectedRatio}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </motion.div>
                   ) : (
                     <motion.div
@@ -481,24 +672,65 @@ export default function GenerateImagesPage() {
               </Button>
             </div>
           ) : recentImages.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {recentImages.map((image, index) => (
-                <motion.div
-                  key={image.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="aspect-square bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-xl overflow-hidden hover:border-primary-500/50 transition-all cursor-pointer group relative"
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {recentImages.map((image, index) => (
+                  <motion.div
+                    key={image.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: index * 0.05 }}
+                    onClick={() =>
+                      setSelectedImage({
+                        url: image.fileUrl,
+                        dimensions: `${image.width}x${image.height}`,
+                        format: "PNG",
+                        filename: image.filename,
+                        createdAt: image.createdAt,
+                      })
+                    }
+                    className="aspect-square bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-xl overflow-hidden hover:border-primary-500/50 transition-all cursor-pointer group relative"
+                  >
+                    {image.fileUrl && image.fileUrl.trim() !== "" ? (
+                      <>
+                        <img
+                          src={image.fileUrl}
+                          alt={`Image générée ${index + 1}`}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-dark-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <div className="text-center">
+                            <ImageIcon className="w-8 h-8 mx-auto mb-1 text-white" />
+                            <p className="text-white text-xs font-medium">
+                              Voir en grand
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-dark-800/50">
+                        <ImageIcon className="w-12 h-12 text-dark-600" />
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Lazy loading indicator & observer target */}
+              {hasMore && (
+                <div
+                  ref={observerTarget}
+                  className="flex justify-center items-center py-8"
                 >
-                  <img
-                    src={image.fileUrl}
-                    alt={`Image générée ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                </motion.div>
-              ))}
-            </div>
+                  {loadingMore && (
+                    <div className="flex items-center gap-2 text-dark-400">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm">Chargement...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-center py-12 bg-dark-900/30 backdrop-blur-sm border border-dark-800/50 rounded-xl">
               <ImageIcon className="w-16 h-16 mx-auto mb-4 text-dark-600" />
@@ -511,6 +743,152 @@ export default function GenerateImagesPage() {
             </div>
           )}
         </motion.div>
+
+        {/* Modal de prévisualisation */}
+        <AnimatePresence>
+          {selectedImage && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedImage(null)}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative max-w-6xl w-full max-h-[90vh] bg-dark-900/95 backdrop-blur-xl border border-dark-800/50 rounded-2xl overflow-hidden shadow-2xl"
+              >
+                {/* Header */}
+                <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-6 bg-gradient-to-b from-dark-900/95 to-transparent">
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="w-6 h-6 text-primary-500" />
+                    <h3 className="text-xl font-bold text-white">
+                      Aperçu de l&apos;image
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    className="p-2 rounded-lg bg-dark-800/50 hover:bg-dark-700/50 transition-colors"
+                  >
+                    <X className="w-6 h-6 text-dark-300" />
+                  </button>
+                </div>
+
+                <div className="grid md:grid-cols-[1fr,400px] gap-6 p-6 pt-20">
+                  {/* Image */}
+                  <div className="flex items-center justify-center min-h-[400px] max-h-[70vh]">
+                    <img
+                      src={selectedImage.url}
+                      alt={selectedImage.description || "Image générée"}
+                      className="max-w-full max-h-full object-contain rounded-xl shadow-2xl"
+                    />
+                  </div>
+
+                  {/* Métadonnées */}
+                  <div className="space-y-6 overflow-y-auto max-h-[70vh]">
+                    {/* Prompt */}
+                    {selectedImage.prompt && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-dark-300 uppercase tracking-wide">
+                          Prompt
+                        </h4>
+                        <p className="text-white leading-relaxed bg-dark-800/30 p-4 rounded-lg border border-dark-700/50">
+                          {selectedImage.prompt}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {selectedImage.description && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-semibold text-dark-300 uppercase tracking-wide">
+                          Description
+                        </h4>
+                        <p className="text-dark-300 text-sm leading-relaxed">
+                          {selectedImage.description}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Infos techniques */}
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-dark-300 uppercase tracking-wide">
+                        Informations
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedImage.dimensions && (
+                          <div className="flex items-center justify-between py-2 px-3 bg-dark-800/30 rounded-lg">
+                            <span className="text-dark-400 text-sm">
+                              Dimensions
+                            </span>
+                            <span className="text-white font-medium">
+                              {selectedImage.dimensions}
+                            </span>
+                          </div>
+                        )}
+                        {selectedImage.format && (
+                          <div className="flex items-center justify-between py-2 px-3 bg-dark-800/30 rounded-lg">
+                            <span className="text-dark-400 text-sm">
+                              Format
+                            </span>
+                            <span className="text-white font-medium">
+                              {selectedImage.format}
+                            </span>
+                          </div>
+                        )}
+                        {selectedImage.size_bytes !== undefined && (
+                          <div className="flex items-center justify-between py-2 px-3 bg-dark-800/30 rounded-lg">
+                            <span className="text-dark-400 text-sm">
+                              Taille
+                            </span>
+                            <span className="text-white font-medium">
+                              {formatFileSize(selectedImage.size_bytes)}
+                            </span>
+                          </div>
+                        )}
+                        {selectedImage.style && (
+                          <div className="flex items-center justify-between py-2 px-3 bg-dark-800/30 rounded-lg">
+                            <span className="text-dark-400 text-sm">Style</span>
+                            <span className="text-white font-medium capitalize">
+                              {selectedImage.style}
+                            </span>
+                          </div>
+                        )}
+                        {selectedImage.createdAt && (
+                          <div className="flex items-center justify-between py-2 px-3 bg-dark-800/30 rounded-lg">
+                            <span className="text-dark-400 text-sm">
+                              Créée le
+                            </span>
+                            <span className="text-white font-medium text-sm">
+                              {formatDate(selectedImage.createdAt)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bouton télécharger */}
+                    <Button
+                      onClick={() =>
+                        handleDownload(
+                          selectedImage.url,
+                          selectedImage.filename
+                        )
+                      }
+                      className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      Télécharger l&apos;image
+                    </Button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </DashboardLayout>
   );

@@ -49,7 +49,7 @@ export async function GET(
     // Pour les jobs en cours, vérifier le statut avec CrewAI backend
     // ✅ Implémenté: Polling du backend Flask pour mise à jour du statut
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:9000';
       const token = request.headers.get('authorization')?.split(' ')[1];
       
       const backendResponse = await fetch(

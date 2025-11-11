@@ -62,7 +62,7 @@ const CreateBookPage = () => {
 
       // Attendre 2 secondes pour que l'utilisateur voie le message de succès
       const timeout = setTimeout(() => {
-        router.push(`/books/${bookId}`);
+        router.push(`/dashboard/books/${bookId}`);
       }, 2000);
       return () => clearTimeout(timeout);
     }
@@ -247,7 +247,7 @@ const CreateBookPage = () => {
                 </div>
 
                 <div className="flex justify-center gap-3">
-                  <Link href="/books">
+                  <Link href="/dashboard/books">
                     <Button variant="outline">
                       <BookIcon className="w-4 h-4 mr-2" />
                       Voir mes livres

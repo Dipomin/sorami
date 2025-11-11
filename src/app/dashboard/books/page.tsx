@@ -178,7 +178,7 @@ const BooksPage = () => {
                 Gérez et éditez vos livres générés par l'IA
               </p>
             </div>
-            <Link href="/books/create">
+            <Link href="/dashboard/books/create">
               <Button className="bg-gradient-violet hover:opacity-90 transition-opacity shadow-glow">
                 <Plus className="w-5 h-5 mr-2" />
                 Nouveau livre
@@ -236,7 +236,7 @@ const BooksPage = () => {
             <p className="text-dark-400 mb-6">
               Commencez par créer votre premier livre avec l'IA
             </p>
-            <Link href="/books/create">
+            <Link href="/dashboard/books/create">
               <Button className="bg-gradient-violet hover:opacity-90 transition-opacity shadow-glow">
                 <Plus className="w-5 h-5 mr-2" />
                 Créer un livre
@@ -253,7 +253,7 @@ const BooksPage = () => {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -5 }}
                 className="group bg-dark-800/30 backdrop-blur-xl border border-dark-700 rounded-2xl p-6 hover:border-primary-500/50 transition-all cursor-pointer relative overflow-hidden"
-                onClick={() => router.push(`/books/${book.id}`)}
+                onClick={() => router.push(`/dashboard/books/${book.id}`)}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 to-accent-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 

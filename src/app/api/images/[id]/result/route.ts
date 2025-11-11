@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
+import { getImagePresignedUrl } from '@/lib/s3-storage';
 
 /**
  * GET /api/images/[id]/result
@@ -70,17 +71,30 @@ export async function GET(
     }
 
     // Transformer les données en format attendu par le frontend
+    // ✅ Générer de nouvelles URLs présignées pour chaque image
+    const imagesWithFreshUrls = await Promise.all(
+      imageGeneration.images
+        .filter(img => img.fileUrl && img.fileUrl.trim() !== '') // Filtrer par fileUrl (URL S3)
+        .map(async (img) => {
+          // Générer une nouvelle URL présignée à partir de l'ancienne URL
+          const freshUrl = await getImagePresignedUrl(img.fileUrl!, 3600); // 1h de validité
+          
+          return {
+            url: freshUrl, // ✅ URL fraîche, garantie valide pour 1h
+            file_path: img.s3Key,
+            format: img.format,
+            dimensions: img.aspectRatio,
+            size_bytes: img.fileSize,
+            description: (img.metadata as any)?.description || imageGeneration.prompt,
+          };
+        })
+    );
+
     const result = {
       job_id: imageGeneration.id,
-      status: 'COMPLETED', // Statut en MAJUSCULES pour correspondre au type ImageJobStatus
-      images: imageGeneration.images.map((img) => ({
-        url: img.fileUrl || '', // URL S3 de l'image
-        file_path: img.s3Key,
-        format: img.format,
-        dimensions: img.aspectRatio,
-        size_bytes: img.fileSize,
-        description: (img.metadata as any)?.description || imageGeneration.prompt,
-      })),
+      status: imageGeneration.status as 'COMPLETED',
+      message: imageGeneration.message || 'Génération terminée',
+      images: imagesWithFreshUrls,
       metadata: {
         model_name: imageGeneration.model,
         version: imageGeneration.modelVersion || '1.0',
@@ -94,6 +108,12 @@ export async function GET(
       },
       generated_at: imageGeneration.completedAt?.toISOString() || imageGeneration.createdAt.toISOString(),
     };
+
+    console.log('✅ [Image Result API] Résultats envoyés:', {
+      job_id: result.job_id,
+      images_count: result.images.length,
+      first_image_url: result.images[0]?.url?.substring(0, 100) + '...',
+    });
 
     return NextResponse.json(result);
   } catch (error) {

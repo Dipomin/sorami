@@ -338,3 +338,81 @@ export async function deleteBlogImage(key: string): Promise<void> {
 export function getBlogImagePublicUrl(key: string): string {
   return `https://${BLOG_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'eu-north-1'}.amazonaws.com/${key}`
 }
+
+/**
+ * Génère une URL présignée pour une image générée (valide 1h)
+ * @param s3KeyOrUrl La clé S3 ou l'URL complète de l'image
+ * @param expiresIn Durée de validité en secondes (défaut: 3600 = 1h)
+ */
+export async function getImagePresignedUrl(s3KeyOrUrl: string, expiresIn: number = 3600): Promise<string> {
+  try {
+    console.log('🔧 [S3] Génération URL présignée...');
+    console.log('   Input:', s3KeyOrUrl);
+    console.log('   Bucket:', BUCKET_NAME);
+    console.log('   Region:', process.env.AWS_REGION);
+    console.log('   Access Key:', process.env.AWS_ACCESS_KEY_ID?.substring(0, 10) + '...');
+    
+    let key = s3KeyOrUrl;
+    
+    // Si c'est une URL S3, extraire la clé
+    if (s3KeyOrUrl.includes('amazonaws.com/')) {
+      // Format: https://bucket.s3.region.amazonaws.com/KEY?params
+      const urlPart = s3KeyOrUrl.split('amazonaws.com/')[1];
+      key = urlPart.split('?')[0]; // Enlever les query params
+      console.log('🔑 [S3] Clé extraite de l\'URL:', key);
+    } else if (s3KeyOrUrl.startsWith('/')) {
+      // Si c'est un chemin local, extraire juste le nom de fichier
+      // On ne peut pas régénérer l'URL dans ce cas
+      console.error('❌ [S3] Chemin local fourni au lieu de la clé S3:', s3KeyOrUrl);
+      return '';
+    }
+    
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key
+    });
+    
+    const url = await getSignedUrl(s3Client, command, { expiresIn });
+    console.log('✅ [S3] URL présignée générée:', url.substring(0, 100) + '...');
+    return url;
+  } catch (error) {
+    console.error('❌ [S3] Erreur génération URL présignée image:', error);
+    console.error('    Input:', s3KeyOrUrl);
+    return '';
+  }
+}
+
+/**
+ * Génère une URL présignée pour une vidéo S3
+ * @param s3KeyOrUrl Clé S3 ou URL S3 complète
+ * @param expiresIn Durée de validité en secondes (défaut: 1h)
+ * @returns URL présignée
+ */
+export async function getVideoPresignedUrl(s3KeyOrUrl: string, expiresIn: number = 3600): Promise<string> {
+  try {
+    console.log('🎬 [S3] Génération URL présignée vidéo...');
+    console.log('   Input:', s3KeyOrUrl.substring(0, 100) + '...');
+    
+    let key = s3KeyOrUrl;
+    
+    // Si c'est une URL S3, extraire la clé
+    if (s3KeyOrUrl.includes('amazonaws.com/')) {
+      const urlPart = s3KeyOrUrl.split('amazonaws.com/')[1];
+      key = urlPart.split('?')[0]; // Enlever les query params
+      console.log('🔑 [S3] Clé extraite:', key);
+    }
+    
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key
+    });
+    
+    const url = await getSignedUrl(s3Client, command, { expiresIn });
+    console.log('✅ [S3] URL présignée vidéo générée');
+    return url;
+  } catch (error) {
+    console.error('❌ [S3] Erreur génération URL présignée vidéo:', error);
+    console.error('    Input:', s3KeyOrUrl);
+    return '';
+  }
+}

@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { deductCredits } from '@/lib/credits';
 import type { ImageGenerationRequest } from '@/types/image-api';
 
-const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.sorami.app';
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:9006';
 
 export async function POST(request: Request) {
   try {
