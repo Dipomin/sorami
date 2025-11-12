@@ -21,9 +21,31 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title:
-    "Sorami - Plateforme d'Intelligence Artificielle pour la création de contenu",
+    "Sorami - Imaginez et créez avec l'Intelligence Artificielle : images, vidéos, articles de blog, ebooks, audios",
   description:
     "Créez des images, vidéos, articles de blog et ebooks avec l'intelligence artificielle",
+  icons: {
+    icon: "/favicon.ico",
+  },
+  metadataBase: new URL("https://sorami.app"),
+  openGraph: {
+    title:
+      "Sorami - Imaginez et créez avec l'Intelligence Artificielle : images, vidéos, articles de blog, ebooks, audios",
+    description:
+      "Créez des images, vidéos, articles de blog et ebooks avec l'intelligence artificielle",
+    url: "https://sorami.app",
+    siteName: "Sorami",
+    images: [
+      {
+        url: "https://sorami.app/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Sorami AI - Créez avec l'IA",
+      },
+    ],
+    locale: "fr_FR",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

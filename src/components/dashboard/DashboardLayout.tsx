@@ -106,11 +106,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Logo */}
           <div className="p-6 border-b border-dark-800/50">
             <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-violet flex items-center justify-center">
-                <span className="text-white font-bold text-xl">S</span>
-              </div>
               <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-accent-400 bg-clip-text text-transparent">
-                Sorami
+                <img src="/assets/logo-sorami.png" alt="Sorami Logo" className="w-36 h-auto" />
               </span>
             </Link>
           </div>

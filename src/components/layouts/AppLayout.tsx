@@ -3,6 +3,7 @@
 import React from "react";
 import Navigation from "@/components/Navigation";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,6 +19,7 @@ export default function AppLayout({
 }: AppLayoutProps) {
   const pathname = usePathname();
 
+  const user = useAuth();
   // Détermination automatique si la navigation doit être affichée
   // La navigation s'affiche partout SAUF sur les pages d'authentification
   const shouldShowNavigation =
@@ -27,7 +29,8 @@ export default function AppLayout({
 
   return (
     <div className="min-h-screen bg-gradient-dark">
-      {shouldShowNavigation && <Navigation />}
+      {!user.isSignedIn && <Navigation />}
+      {user.isSignedIn && <div></div>}
       <main className={shouldShowNavigation ? "pt-16" : ""}>{children}</main>
     </div>
   );

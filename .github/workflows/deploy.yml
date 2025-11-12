@@ -144,14 +144,18 @@ jobs:
             echo "✅ Node.js $(node -v) found"
             echo "✅ npm $(npm -v) found"
             
-            echo " Pulling latest changes..."
+            echo "🧹 Stashing local changes..."
+            # Stash any local changes including package-lock.json
+            git stash --include-untracked || true
+            
+            echo "🔄 Pulling latest changes..."
             git fetch origin
             git pull origin main
             
             echo "🔧 Fixing permissions if needed..."
             # Fix permissions and clean directories (sudo configured without password)
             echo "🧹 Cleaning build directories..."
-            sudo rm -rf node_modules .next package-lock.json 2>/dev/null || rm -rf node_modules .next package-lock.json
+            sudo rm -rf node_modules .next 2>/dev/null || rm -rf node_modules .next
             
             echo "🔓 Ensuring correct ownership..."
             sudo chown -R $(whoami):$(whoami) . 2>/dev/null || true
