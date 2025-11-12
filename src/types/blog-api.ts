@@ -31,6 +31,7 @@ export interface BlogJobStatusResponse {
 
 export interface BlogArticleResult {
   job_id: string;
+  article_id?: string; // ID de l'article créé (retourné par le webhook)
   title: string;
   meta_description: string;
   introduction: string;

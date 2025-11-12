@@ -89,8 +89,9 @@ export async function GET() {
         used: usedCredits,
         remaining: remainingCredits,
         max: maxCredits,
+        totalCredits: totalCredits,
         percentage,
-        plan: paystackSubscription?.plan.name || "FREE",
+        plan: paystackSubscription?.plan.name || "AUCUN",
       },
       breakdown: {
         images: { count: imagesCount },

@@ -87,44 +87,7 @@ export default function NotFound() {
           </Link>
         </motion.div>
 
-        {/* Quick links */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-          className="mt-12 pt-8 border-t border-dark-800/50"
-        >
-          <p className="text-dark-400 mb-4">Pages populaires :</p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              href="/generation-images"
-              className="text-primary-400 hover:text-primary-300 transition-colors"
-            >
-              Génération d'images
-            </Link>
-            <span className="text-dark-700">•</span>
-            <Link
-              href="/generation-videos"
-              className="text-primary-400 hover:text-primary-300 transition-colors"
-            >
-              Génération de vidéos
-            </Link>
-            <span className="text-dark-700">•</span>
-            <Link
-              href="/blog"
-              className="text-primary-400 hover:text-primary-300 transition-colors"
-            >
-              Blog
-            </Link>
-            <span className="text-dark-700">•</span>
-            <Link
-              href="/books"
-              className="text-primary-400 hover:text-primary-300 transition-colors"
-            >
-              Ebooks
-            </Link>
-          </div>
-        </motion.div>
+        
       </div>
     </div>
   );

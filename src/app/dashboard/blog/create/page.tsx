@@ -33,12 +33,15 @@ export default function CreateBlogPage() {
   }, [jobId, pollJob]);
 
   useEffect(() => {
-    if (result) {
+    if (result && result.article_id) {
       // Rediriger vers la page de l'article une fois terminé
-      // Notez : Nous devrons créer l'article côté serveur via le webhook
-      // donc nous attendons un peu avant de rediriger
       setTimeout(() => {
-        router.push(`/blog`);
+        router.push(`/dashboard/blog/${result.article_id}`);
+      }, 2000);
+    } else if (result) {
+      // Fallback : rediriger vers la liste des articles
+      setTimeout(() => {
+        router.push(`/dashboard/blog`);
       }, 2000);
     }
   }, [result, router]);

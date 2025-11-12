@@ -93,6 +93,7 @@ interface Credits {
   max: number;
   percentage: number;
   plan: string;
+  totalCredits: number;
 }
 
 export default function DashboardPage() {
@@ -430,7 +431,7 @@ export default function DashboardPage() {
                       ⚡ Crédits restants
                     </h3>
                     <p className="text-3xl font-bold text-white mb-2">
-                      {credits.remaining} / {credits.max}
+                      {credits.remaining} / {credits.totalCredits}
                     </p>
                     <div className="w-full h-2 bg-dark-800/50 rounded-full mb-4 overflow-hidden">
                       <div
@@ -446,7 +447,7 @@ export default function DashboardPage() {
                       </Button>
                     </Link>
                     <p className="text-dark-400 text-xs mt-3 text-center">
-                      Plan: {credits.plan} • Utilisés: {credits.used}
+                      Abonnement: {credits.plan} • Crédits utilisés: {credits.used}
                     </p>
                   </>
                 )}

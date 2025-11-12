@@ -13,6 +13,22 @@ import {
 import { BlogArticle } from "../types/blog-api";
 import { Button } from "./ui/button";
 
+// Helper pour parser les tags en toute sécurité
+function parseTags(tags: any): string[] {
+  if (!tags) return [];
+  if (Array.isArray(tags)) return tags;
+  if (typeof tags === "string") {
+    try {
+      const parsed = JSON.parse(tags);
+      return Array.isArray(parsed) ? parsed : [tags];
+    } catch {
+      // Si ce n'est pas du JSON, c'est un tag simple
+      return [tags];
+    }
+  }
+  return [];
+}
+
 interface BlogListProps {
   blogs: BlogArticle[];
   loading?: boolean;
@@ -67,7 +83,10 @@ export const BlogList: React.FC<BlogListProps> = ({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
         >
-          <Link href={`/blog/${blog.id}`} className="block group h-full">
+          <Link
+            href={`/dashboard/blog/${blog.id}`}
+            className="block group h-full"
+          >
             <div className="h-full bg-dark-900/50 backdrop-blur-sm border border-dark-800/50 rounded-2xl p-6 hover:border-primary-500/50 hover:shadow-glow transition-all duration-300">
               {/* Status and SEO Score */}
               <div className="flex items-start justify-between mb-4">
@@ -120,23 +139,28 @@ export const BlogList: React.FC<BlogListProps> = ({
               )}
 
               {/* Tags */}
-              {blog.tags && blog.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {blog.tags.slice(0, 3).map((tag, tagIndex) => (
-                    <span
-                      key={tagIndex}
-                      className="inline-block bg-primary-500/10 text-primary-300 text-xs px-2 py-1 rounded-lg border border-primary-500/20"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                  {blog.tags.length > 3 && (
-                    <span className="inline-block text-dark-400 text-xs px-2 py-1">
-                      +{blog.tags.length - 3}
-                    </span>
-                  )}
-                </div>
-              )}
+              {(() => {
+                const tags = parseTags(blog.tags);
+                return (
+                  tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {tags.slice(0, 3).map((tag, tagIndex) => (
+                        <span
+                          key={tagIndex}
+                          className="inline-block bg-primary-500/10 text-primary-300 text-xs px-2 py-1 rounded-lg border border-primary-500/20"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                      {tags.length > 3 && (
+                        <span className="inline-block text-dark-400 text-xs px-2 py-1">
+                          +{tags.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  )
+                );
+              })()}
 
               {/* Footer */}
               <div className="flex items-center justify-between text-sm text-dark-400 pt-4 border-t border-dark-800/50">
